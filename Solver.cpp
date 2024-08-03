@@ -26,7 +26,6 @@ std::unordered_map<OperatorType, uint8_t> g_OperandCountTable = {
 static void ExecuteUnaryOperator(std::stack<Token>& solve) {
 	Token op;
 	Token rhs;
-	Token lhs;
 
 	op = solve.top();
 	solve.pop();
@@ -110,6 +109,9 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 		while (!holding.empty()) {
 			output.push_back(holding.top());
 			holding.pop();
+			if (holding.empty()) {
+				break;
+			}
 			if (g_PrecedenceTable[tryPush.first] > g_PrecedenceTable[holding.top().first]) {
 				break;
 			}
