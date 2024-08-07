@@ -11,7 +11,10 @@ std::unordered_map<OperatorType, uint8_t> g_PrecedenceTable = {
 	{ OperatorType::MUL, 2 },
 	{ OperatorType::DIV, 2 },
 	{ OperatorType::MOD, 2 },
-	{ OperatorType::POW, 3 }
+	{ OperatorType::POW, 3 },
+	{ OperatorType::FAC, 4 },
+	{ OperatorType::PAREN_OPEN, 0 },
+	{ OperatorType::PAREN_CLOSE, 0 }
 };
 
 std::unordered_map<OperatorType, uint8_t> g_OperandCountTable = {
@@ -20,7 +23,8 @@ std::unordered_map<OperatorType, uint8_t> g_OperandCountTable = {
 	{ OperatorType::MUL, 2 },
 	{ OperatorType::DIV, 2 },
 	{ OperatorType::MOD, 2 },
-	{ OperatorType::POW, 2 }
+	{ OperatorType::POW, 2 },
+	{ OperatorType::FAC, 1 }
 };
 
 static void ExecuteUnaryOperator(std::stack<Token>& solve) {
@@ -33,6 +37,10 @@ static void ExecuteUnaryOperator(std::stack<Token>& solve) {
 	solve.pop();
 
 	switch (op.first) {
+		case OperatorType::FAC:
+			solve.emplace(OperatorType::LITERAL, [](int64_t n){ for (int64_t i = n - 1; i > 1; i--) { n *= i; } return n; }(std::get<int64_t>(rhs.second)));
+			break;
+		
 		default:
 			fprintf(stderr, "Failed to execute unary operation.\n");
 	}
@@ -106,14 +114,22 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 	std::vector<Token> output;
 
 	auto flushHolding = [&output, &holding](const Token& tryPush) {
-		while (!holding.empty()) {
-			output.push_back(holding.top());
-			holding.pop();
-			if (holding.empty()) {
-				break;
+		if (tryPush.first == OperatorType::PAREN_CLOSE) {
+			while (!holding.empty()) {
+				if (holding.top().first == OperatorType::PAREN_OPEN) {
+					holding.pop();
+					break;
+				}
+				output.push_back(holding.top());
+				holding.pop();
 			}
-			if (g_PrecedenceTable[tryPush.first] > g_PrecedenceTable[holding.top().first]) {
-				break;
+		} else {
+			while (!holding.empty()) {
+				if (g_PrecedenceTable[tryPush.first] > g_PrecedenceTable[holding.top().first]) {
+					break;
+				}
+				output.push_back(holding.top());
+				holding.pop();
 			}
 		}
 	};
@@ -131,6 +147,14 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 		}
 		if (holding.empty()) {
 			holding.push(token);
+			continue;
+		}
+		if (token.first == OperatorType::PAREN_OPEN) {
+			holding.push(token);
+			continue;
+		}
+		if (token.first == OperatorType::PAREN_CLOSE) {
+			flushHolding(token);
 			continue;
 		}
 		Token stackTop = holding.top();

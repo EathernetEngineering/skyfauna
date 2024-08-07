@@ -16,6 +16,7 @@ enum class OperatorType : uint16_t {
 	DIV,
 	MOD,
 	POW,
+	FAC,
 	PAREN_OPEN,
 	PAREN_CLOSE
 };

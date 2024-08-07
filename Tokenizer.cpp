@@ -40,6 +40,10 @@ std::vector<Token> Tokenize(std::string_view eq) {
 				t = OperatorType::POW;
 				break;
 
+			case '!':
+				t = OperatorType::FAC;
+				break;
+
 			case '(':
 				t = OperatorType::PAREN_OPEN;
 				break;
