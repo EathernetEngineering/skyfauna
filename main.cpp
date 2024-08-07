@@ -21,11 +21,11 @@ static const option longOpts[] = {
 };
 
 static void printUsage(const char* progName) {
-	fprintf(stdout, "Usage: %s [OPTION...] INPUT..."
-	                "\t-o, --output     File to write output to"
-	                "\t-?, --help       Print this message"
-	                "\t    --usage"
-	                "\t    --version    Print program version",
+	fprintf(stdout, "Usage: %s [OPTION...] INPUT...\n"
+	                "\t-o, --output     File to write output to\n"
+	                "\t-?, --help       Print this message\n"
+	                "\t    --usage\n"
+	                "\t    --version    Print program version\n",
 	        progName);
 }
 
