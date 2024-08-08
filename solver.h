@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "Tokenizer.h"
+#include "parser.h"
 
 std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens);
 int64_t SolveReversePolishNotation(const std::vector<Token>& tokens);

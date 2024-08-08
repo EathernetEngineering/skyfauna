@@ -1,9 +1,11 @@
 #include <cstdlib>
 #include <cstdio>
+#include <vector>
+#include <string>
 
 #include "config.h"
-#include "Solver.h"
-#include "Tokenizer.h"
+#include "solver.h"
+#include "parser.h"
 
 #include <getopt.h>
 

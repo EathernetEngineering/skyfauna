@@ -7,6 +7,6 @@ set(CXX_STANDARD_REQUIRED 20)
 
 configure_file(config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h @ONLY)
 
-add_executable(skyfauna main.cpp Solver.cpp Tokenizer.cpp)
+add_executable(skyfauna main.cpp solver.cpp parser.cpp)
 
 install(TARGETS skyfauna RUNTIME DESTINATION bin)

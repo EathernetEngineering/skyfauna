@@ -1,5 +1,4 @@
-#include "Solver.h"
-#include "Tokenizer.h"
+#include "solver.h"
 
 #include <stack>
 #include <unordered_map>
