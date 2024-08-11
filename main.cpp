@@ -1,7 +1,10 @@
 #include <cstdlib>
 #include <cstdio>
+#include <exception>
 #include <vector>
 #include <string>
+#include <iostream>
+#include <unordered_map>
 
 #include "config.h"
 #include "solver.h"
@@ -35,10 +38,45 @@ static void printVersion(const char* progName) {
 	fprintf(stdout, "%s %s\n", progName, SKYFAUNA_VERSION);
 }
 
-int main(int argc, char **argv) {
-	char* eq = nullptr;
-	size_t eqSize;
+std::unordered_map<TokenType, std::string> g_TokenNames = {
+	{ TokenType::INVALID,         "INVALID TOKEN" },
+	{ TokenType::KEYWORD,         "KEYWORD" },
+	{ TokenType::DECIMAL_LITERAL, "DECIMAL LITERAL" },
+	{ TokenType::INT_LITERAL,     "INT LITERAL" },
+	{ TokenType::CHAR_LITERAL,    "CHAR LITERAL" },
+	{ TokenType::STRING_LITERAL,  "STRING LITERAL" },
+	{ TokenType::SYMBOL,          "SYMBOL" },
+	{ TokenType::ADD,             "ADD OPERATOR" },
+	{ TokenType::INC,             "INC OPERATOR" },
+	{ TokenType::SUB,             "SUB OPERATOR" },
+	{ TokenType::DEC,             "DEC OPERATOR" },
+	{ TokenType::MUL,             "MUL OPERATOR" },
+	{ TokenType::DIV,             "DIV OPERATOR" },
+	{ TokenType::MOD,             "MOD OPERATOR" },
+	{ TokenType::XOR,             "XOR OPERATOR" },
+	{ TokenType::AND,             "AND" },
+	{ TokenType::OR,              "OR" },
+	{ TokenType::BITAND,          "BITWISE AND" },
+	{ TokenType::BITOR,           "BITWISE OR" },
+	{ TokenType::BITSL,           "BIT SHIFT LEFT" },
+	{ TokenType::BITSR,           "BIT SHIFT RIGHT" },
+	{ TokenType::LESSTHAN,        "LESS THAN OPERATOR" },
+	{ TokenType::GREATERTHAN,     "GREATER THAN OPERATOR" },
+	{ TokenType::LESSTHANEQ,      "LESS THAN OR EQUAL OPERATOR" },
+	{ TokenType::GREATERTHANEQ,   "GREATER THAN OR EQUAL OPERATOR" },
+	{ TokenType::EQUAL,           "EQUAL OPERATOR" },
+	{ TokenType::ASSIGN,          "ASSIGNMENT OPERATOR" },
+	{ TokenType::SEMICOLON,       "SEMICOLON" },
+	{ TokenType::COLON,           "COLON" },
+	{ TokenType::PAREN_OPEN,      "PARENTHESES OPEN" },
+	{ TokenType::PAREN_CLOSE,     "PARENTHESES CLOSE" },
+	{ TokenType::BRACKET_OPEN,    "BRACKET OPEN" },
+	{ TokenType::BRACKET_CLOSE,   "BRACKET CLOSE" },
+	{ TokenType::BRACE_OPEN,      "BRACE OPEN" },
+	{ TokenType::BRACE_CLOSE,     "BRACE CLOSE" }
+};
 
+int main(int argc, char **argv) {
 	std::vector<std::string> inputFilenames;
 	std::string outputFilename = "out.txt";
 
@@ -68,17 +106,22 @@ int main(int argc, char **argv) {
 		inputFilenames.push_back(argv[i]);
 	}
 
-	fprintf(stdout, "Enter equation to be solved: ");
-	fflush(stdout);
-	
-	getdelim(&eq, &eqSize, '\n', stdin);
+	std::vector<Token> tokens;
+	for (auto inFile : inputFilenames) {
+		try {
+			tokens = Tokenize(inFile);
+		} catch (std::exception& e) {
+			fprintf(stderr, "%s\n", e.what());
+		}
+		for (auto token : tokens) {
+			std::cout << token.text << "\t\t" << g_TokenNames[token.type] << "\n";
+		}
+	}
 
-	auto tokens = Tokenize(eq);
-	free(eq);
-	auto tokensrpn = GetReversePolishNotation(tokens);
-	int64_t solution = SolveReversePolishNotation(tokensrpn);
+	//auto tokensrpn = GetReversePolishNotation(tokens);
+	//int64_t solution = SolveReversePolishNotation(tokensrpn);
 
-	fprintf(stdout, "Solution: %li\n", solution);
+	//fprintf(stdout, "Solution: %li\n", solution);
 
 	return 0;
 }

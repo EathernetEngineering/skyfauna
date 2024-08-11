@@ -5,25 +5,25 @@
 #include <cmath>
 
 std::unordered_map<OperatorType, uint8_t> g_PrecedenceTable = {
-	{ OperatorType::ADD, 1 },
-	{ OperatorType::SUB, 1 },
-	{ OperatorType::MUL, 2 },
-	{ OperatorType::DIV, 2 },
-	{ OperatorType::MOD, 2 },
-	{ OperatorType::POW, 3 },
-	{ OperatorType::FAC, 4 },
-	{ OperatorType::PAREN_OPEN, 0 },
-	{ OperatorType::PAREN_CLOSE, 0 }
+	{ TokenType::ADD, 1 },
+	{ TokenType::SUB, 1 },
+	{ TokenType::MUL, 2 },
+	{ TokenType::DIV, 2 },
+	{ TokenType::MOD, 2 },
+	{ TokenType::POW, 3 },
+	{ TokenType::FAC, 4 },
+	{ TokenType::PAREN_OPEN, 0 },
+	{ TokenType::PAREN_CLOSE, 0 }
 };
 
 std::unordered_map<OperatorType, uint8_t> g_OperandCountTable = {
-	{ OperatorType::ADD, 2 },
-	{ OperatorType::SUB, 2 },
-	{ OperatorType::MUL, 2 },
-	{ OperatorType::DIV, 2 },
-	{ OperatorType::MOD, 2 },
-	{ OperatorType::POW, 2 },
-	{ OperatorType::FAC, 1 }
+	{ TokenType::ADD, 2 },
+	{ TokenType::SUB, 2 },
+	{ TokenType::MUL, 2 },
+	{ TokenType::DIV, 2 },
+	{ TokenType::MOD, 2 },
+	{ TokenType::POW, 2 },
+	{ TokenType::FAC, 1 }
 };
 
 static void ExecuteUnaryOperator(std::stack<Token>& solve) {
@@ -35,9 +35,9 @@ static void ExecuteUnaryOperator(std::stack<Token>& solve) {
 	rhs = solve.top();
 	solve.pop();
 
-	switch (op.first) {
-		case OperatorType::FAC:
-			solve.emplace(OperatorType::LITERAL, [](int64_t n){ for (int64_t i = n - 1; i > 1; i--) { n *= i; } return n; }(std::get<int64_t>(rhs.second)));
+	switch (op.type) {
+		case TokenType::FAC:
+			solve.emplace(TokenType::LITERAL, [](int64_t n){ for (int64_t i = n - 1; i > 1; i--) { n *= i; } return n; }(std::get<int64_t>(rhs.value)));
 			break;
 		
 		default:
@@ -57,29 +57,29 @@ static void ExecuteBinaryOperator(std::stack<Token>& solve) {
 	lhs = solve.top();
 	solve.pop();
 
-	switch (op.first) {
-		case OperatorType::ADD:
-			solve.emplace(OperatorType::LITERAL, std::get<int64_t>(lhs.second) + std::get<int64_t>(rhs.second));
+	switch (op.type) {
+		case TokenType::ADD:
+			solve.emplace(TokenType::LITERAL, std::get<int64_t>(lhs.value) + std::get<int64_t>(rhs.value));
 			break;
 		
-		case OperatorType::SUB:
-			solve.emplace(OperatorType::LITERAL, std::get<int64_t>(lhs.second) - std::get<int64_t>(rhs.second));
+		case TokenType::SUB:
+			solve.emplace(TokenType::LITERAL, std::get<int64_t>(lhs.value) - std::get<int64_t>(rhs.value));
 			break;
 		
-		case OperatorType::MUL:
-			solve.emplace(OperatorType::LITERAL, std::get<int64_t>(lhs.second) * std::get<int64_t>(rhs.second));
+		case TokenType::MUL:
+			solve.emplace(TokenType::LITERAL, std::get<int64_t>(lhs.value) * std::get<int64_t>(rhs.value));
 			break;
 		
-		case OperatorType::DIV:
-			solve.emplace(OperatorType::LITERAL, std::get<int64_t>(lhs.second) / std::get<int64_t>(rhs.second));
+		case TokenType::DIV:
+			solve.emplace(TokenType::LITERAL, std::get<int64_t>(lhs.value) / std::get<int64_t>(rhs.value));
 			break;
 		
-		case OperatorType::MOD:
-			solve.emplace(OperatorType::LITERAL, std::get<int64_t>(lhs.second) % std::get<int64_t>(rhs.second));
+		case TokenType::MOD:
+			solve.emplace(TokenType::LITERAL, std::get<int64_t>(lhs.value) % std::get<int64_t>(rhs.value));
 			break;
 		
-		case OperatorType::POW:
-			solve.emplace(OperatorType::LITERAL, (int64_t)std::pow(std::get<int64_t>(lhs.second), std::get<int64_t>(rhs.second)));
+		case TokenType::POW:
+			solve.emplace(TokenType::LITERAL, (int64_t)std::pow(std::get<int64_t>(lhs.value), std::get<int64_t>(rhs.value)));
 			break;
 		
 		default:
@@ -102,7 +102,7 @@ static void ExecuteTernaryOperator(std::stack<Token>& solve) {
 	lhs = solve.top();
 	solve.pop();
 
-	switch (op.first) {
+	switch (op.type) {
 		default:
 			fprintf(stderr, "Failed to execute ternary operation.\n");
 	}
@@ -113,9 +113,9 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 	std::vector<Token> output;
 
 	auto flushHolding = [&output, &holding](const Token& tryPush) {
-		if (tryPush.first == OperatorType::PAREN_CLOSE) {
+		if (tryPush.type == TokenType::PAREN_CLOSE) {
 			while (!holding.empty()) {
-				if (holding.top().first == OperatorType::PAREN_OPEN) {
+				if (holding.top().type == TokenType::PAREN_OPEN) {
 					holding.pop();
 					break;
 				}
@@ -124,7 +124,7 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 			}
 		} else {
 			while (!holding.empty()) {
-				if (g_PrecedenceTable[tryPush.first] > g_PrecedenceTable[holding.top().first]) {
+				if (g_PrecedenceTable[tryPush.type] > g_PrecedenceTable[holding.top().type]) {
 					break;
 				}
 				output.push_back(holding.top());
@@ -140,7 +140,7 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 	};
 
 	for (auto token : tokens) {
-		if (token.first == OperatorType::LITERAL) {
+		if (token.type == TokenType::LITERAL) {
 			output.push_back(token);
 			continue;
 		}
@@ -148,16 +148,16 @@ std::vector<Token> GetReversePolishNotation(const std::vector<Token>& tokens) {
 			holding.push(token);
 			continue;
 		}
-		if (token.first == OperatorType::PAREN_OPEN) {
+		if (token.type == TokenType::PAREN_OPEN) {
 			holding.push(token);
 			continue;
 		}
-		if (token.first == OperatorType::PAREN_CLOSE) {
+		if (token.type == TokenType::PAREN_CLOSE) {
 			flushHolding(token);
 			continue;
 		}
 		Token stackTop = holding.top();
-		if (g_PrecedenceTable[token.first] < g_PrecedenceTable[stackTop.first]) {
+		if (g_PrecedenceTable[token.type] < g_PrecedenceTable[stackTop.type]) {
 			flushHolding(token);
 		}
 		holding.push(token);
@@ -173,10 +173,10 @@ int64_t SolveReversePolishNotation(const std::vector<Token>& tokens) {
 
 	for (auto token : tokens) {
 		solve.push(token);
-		if (token.first == OperatorType::LITERAL) {
+		if (token.type == TokenType::LITERAL) {
 			continue;
 		}
-		switch (g_OperandCountTable[token.first]) {
+		switch (g_OperandCountTable[token.type]) {
 			case 1:
 				ExecuteUnaryOperator(solve);
 				break;
@@ -194,6 +194,6 @@ int64_t SolveReversePolishNotation(const std::vector<Token>& tokens) {
 		}
 	}
 
-	return std::get<int64_t>(solve.top().second);
+	return std::get<int64_t>(solve.top().value);
 }
 

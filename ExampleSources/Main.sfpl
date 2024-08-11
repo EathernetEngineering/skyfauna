@@ -1,5 +1,5 @@
 class Main(main) {
 	public static main(str : arg)(null) {
-		.
+		print("Hello, World!")();
 	}
 }

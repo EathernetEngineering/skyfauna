@@ -4,25 +4,53 @@
 #include <string>
 #include <string_view>
 #include <variant>
-#include <utility>
 #include <vector>
 #include <cstdint>
 
-enum class OperatorType : uint16_t {
-	LITERAL,
+enum class TokenType : uint32_t {
+	INVALID,
+	KEYWORD,
+	DECIMAL_LITERAL,
+	INT_LITERAL,
+	CHAR_LITERAL,
+	STRING_LITERAL,
+	SYMBOL,
 	ADD,
+	INC,
 	SUB,
+	DEC,
 	MUL,
 	DIV,
 	MOD,
-	POW,
-	FAC,
+	XOR,
+	AND,
+	OR,
+	BITAND,
+	BITOR,
+	BITSL,
+	BITSR,
+	LESSTHAN,
+	GREATERTHAN,
+	LESSTHANEQ,
+	GREATERTHANEQ,
+	EQUAL,
+	ASSIGN,
+	SEMICOLON,
+	COLON,
 	PAREN_OPEN,
-	PAREN_CLOSE
+	PAREN_CLOSE,
+	BRACKET_OPEN,
+	BRACKET_CLOSE,
+	BRACE_OPEN,
+	BRACE_CLOSE
 };
 
-using Token = std::pair<OperatorType, std::variant<std::monostate, int64_t>>;
+struct Token {
+	TokenType type;
+	std::string text;
+	std::variant <int64_t, double> value;
+};
 
-std::vector<Token> Tokenize(std::string_view eq);
+std::vector<Token> Tokenize(const std::string& fileName);
 
 #endif
