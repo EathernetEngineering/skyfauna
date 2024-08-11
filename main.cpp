@@ -8,7 +8,7 @@
 
 #include "config.h"
 #include "solver.h"
-#include "parser.h"
+#include "lex.h"
 
 #include <getopt.h>
 
