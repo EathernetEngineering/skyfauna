@@ -1,8 +1,13 @@
-#ifndef CEE_AST_H_
-#define CEE_AST_H_
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2025 Chloe Eather
 
-#include "Tokenizer.h"
+#ifndef SKYFAUNA_AST_H_
+#define SKYFAUNA_AST_H_
+
+#include <lex.h>
+
 #include <memory>
+#include <vector>
 
 struct ASTNode {
 	std::shared_ptr<ASTNode> parent;
@@ -14,6 +19,7 @@ struct ASTNode {
 class AbstactSyntaxTree {
 	
 };
+
 
 #endif
 

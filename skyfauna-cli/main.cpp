@@ -1,16 +1,19 @@
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2025 Chloe Eather
+
+#include <skyfauna/config.h>
+#include <skyfauna/solver.h>
+#include <skyfauna/lex.h>
+
+#include <exception>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <cstdlib>
 #include <cstdio>
-#include <exception>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <unordered_map>
-
-#include "config.h"
-#include "solver.h"
-#include "lex.h"
-
 #include <getopt.h>
+
 
 enum Arguments : uint32_t {
 	ARG_VERSION
@@ -35,7 +38,7 @@ static void printUsage(const char* progName) {
 }
 
 static void printVersion(const char* progName) {
-	fprintf(stdout, "%s %s\n", progName, SKYFAUNA_VERSION);
+	fprintf(stdout, "%s %d.%d\n", progName, SKYFAUNA_VERSION_MAJOR, SKYFAUNA_VERSION_MINOR);
 }
 
 std::unordered_map<TokenType, std::string> g_TokenNames = {
@@ -79,6 +82,11 @@ std::unordered_map<TokenType, std::string> g_TokenNames = {
 int main(int argc, char **argv) {
 	std::vector<std::string> inputFilenames;
 	std::string outputFilename = "out.txt";
+
+	if (argc < 2) {
+		std::cerr << "No sources provided!" << std::endl;
+		printUsage(argv[0]);
+	}
 
 	int optionIndex = 0;
 	for (;;) {

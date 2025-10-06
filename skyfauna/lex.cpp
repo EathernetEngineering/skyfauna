@@ -1,4 +1,7 @@
-#include "lex.h"
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2025 Chloe Eather
+
+#include <skyfauna/lex.h>
 
 #include <cctype>
 #include <map>

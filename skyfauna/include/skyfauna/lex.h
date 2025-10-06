@@ -1,5 +1,8 @@
-#ifndef CEE_TOKENIZER_H_
-#define CEE_TOKENIZER_H_
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2025 Chloe Eather
+
+#ifndef SKYFAUNA_LEX_H_
+#define SKYFAUNA_LEX_H_
 
 #include <string>
 #include <string_view>
@@ -8,7 +11,7 @@
 #include <cstdint>
 
 enum class TokenType : uint32_t {
-	INVALID,
+	INVALID = 0,
 	KEYWORD,
 	DECIMAL_LITERAL,
 	INT_LITERAL,

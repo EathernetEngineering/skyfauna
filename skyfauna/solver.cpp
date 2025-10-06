@@ -1,4 +1,7 @@
-#include "solver.h"
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2025 Chloe Eather
+//
+#include <skyfauna/solver.h>
 
 #include <stack>
 #include <unordered_map>

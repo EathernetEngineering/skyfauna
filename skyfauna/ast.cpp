@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
-class Main(main) {
-	public static main(str : arg)(null) {
-		.
-	}
-}
+#include <ast.h>
+
+
