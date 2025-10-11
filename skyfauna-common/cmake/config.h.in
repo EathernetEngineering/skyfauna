@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
-#ifndef SKYFAUNA_CONFIG_H_
-#define SKYFAUNA_CONFIG_H_
+#ifndef SKYFAUNA_COMMON_CONFIG_H_
+#define SKYFAUNA_COMMON_CONFIG_H_
 
 #define SKYFAUNA_VERSION_MAJOR @skyfauna_VERSION_MAJOR@
 #define SKYFAUNA_VERSION_MINOR @skyfauna_VERSION_MINOR@
 #define SKYFAUNA_VERSION_PATCH @skyfauna_VERSION_PATCH@
 
+#cmakedefine SKYFAUNA_ENABLE_ASSERTIONS
+
 #endif
+

@@ -2,292 +2,390 @@
 // Copyright (C) 2025 Chloe Eather
 
 #include <skyfauna/lex.h>
+#include <skyfauna/common/log.h>
+#include <skyfauna/common/util.h>
 
-#include <cctype>
-#include <map>
-#include <set>
+#include <algorithm>
+#include <array>
 #include <stdexcept>
-#include <format>
 #include <string>
 #include <string_view>
-
-#include <unistd.h>
+#include <cctype>
 #include <fcntl.h>
+#include <unistd.h>
 
-static const std::map<std::string, TokenType> g_OperatorMap = {
-	{ "+", TokenType::ADD },
-	{ "++", TokenType::INC },
-	{ "-", TokenType::SUB },
-	{ "--", TokenType::DEC },
-	{ "*", TokenType::MUL },
-	{ "/", TokenType::DIV },
-	{ "%", TokenType::MOD },
-	{ "^", TokenType::XOR },
-	{ "&&", TokenType::AND },
-	{ "||", TokenType::OR },
-	{ "&", TokenType::BITAND },
-	{ "|", TokenType::BITOR },
-	{ "<<", TokenType::BITSL },
-	{ ">>", TokenType::BITSR },
-	{ "<", TokenType::LESSTHAN },
-	{ ">", TokenType::GREATERTHAN },
-	{ "<=", TokenType::LESSTHANEQ },
-	{ ">=", TokenType::GREATERTHANEQ },
-	{ "==", TokenType::EQUAL },
-	{ "=", TokenType::ASSIGN },
-	{ ";", TokenType::SEMICOLON },
-	{ ":", TokenType::COLON },
-	{ "(", TokenType::PAREN_OPEN },
-	{ ")", TokenType::PAREN_CLOSE },
-	{ "[", TokenType::BRACKET_OPEN },
-	{ "]", TokenType::BRACKET_CLOSE },
-	{ "{", TokenType::BRACE_OPEN },
-	{ "}", TokenType::BRACE_CLOSE },
-};
+// ***********************************************
+// ********** Types looked for by lexer **********
+// ***************** Lexer state *****************
+// ***********************************************
 
-std::set<std::string> g_Keywords = {
-	"null",
+static constexpr std::array g_Operators = std::to_array<std::string_view>({
+	"+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>", "++", "--",
+	"!", "&&", "||", "==", "!=", "<", "<=", ">", ">=",
+	"=", "+=", "-=" , "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="
+});
+static constexpr size_t g_LongestOperator =
+	skyfauna::LongestStrlen(g_Operators);
+
+static constexpr std::array g_Delimiters = std::to_array<std::string_view>({
+	"(", ")", "[", "]", "{", "}", ",", ".", ";", ":", ".", "?", "->",
+	"#", "...",
+	"//", "/*"
+});
+static constexpr size_t g_LongestDelimiter =
+	skyfauna::LongestStrlen(g_Delimiters);
+
+static constexpr std::array g_Keywords = std::to_array<std::string_view>({
 	"int",
-	"double",
-	"bool",
-	"str",
-	"class",
-	"if",
-	"else",
-	"switch",
-	"for",
-	"do",
-	"while",
-	"break",
+	"float",
+	"char",
+	"string",
+	"void",
+	"ptr",
 	"return",
-};
+	"static",
+	"class",
+	"public",
+	"private",
+	"protected",
+	"null",
+});
 
-enum class LexerState : uint16_t {
-	NEW_TOKEN,
-	NUMERIC_LITERAL,
-	STRING_LITERAL,
-	CHAR_LITERAL,
-	OPERATOR,
-	SYMBOL,
-	COMPLETE_TOKEN,
-	EOF_TOKEN
-};
+static constexpr std::array g_KeywordHashes = skyfauna::HashStrings(g_Keywords);
 
-static std::string XSpaces(int n) {
-	std::string str;
-	for (uint32_t i = 0; i < n; i++) {
-		str.push_back(' ');
-	}
-	return str;
-}
 
-static std::vector<std::string_view> SplitDelim(const std::string& str, char delim) {
-	std::vector<std::string_view> split;
-
-	auto begin = str.begin();
-	for (auto c = str.begin(); c != str.end(); ++c) {
-		if (*c == delim) {
-			split.emplace_back(begin, c);
-
-			// begin of next line doesn't include the delimiter
-			begin = std::next(c);
-		}
-
-	}
-	return split;
-}
-
-std::vector<Token> Tokenize(const std::string& fileName) {
-	int fileDesc = open(fileName.c_str(), 0, O_RDONLY);
-	if (fileDesc == -1) {
-		throw std::runtime_error(std::format("Failed to open file: {}", fileName));
-	}
-
-	std::string file;
-
+namespace fmt {
+template<>
+struct formatter<skyfauna::Lexer::State> : formatter<std::string> {
+	auto format(skyfauna::Lexer::State t, format_context& ctx) const -> decltype(ctx.out())
 	{
-		size_t fileSize = lseek(fileDesc, 0, SEEK_END);
-		lseek(fileDesc, 0, SEEK_SET);
-
-		file.resize(fileSize);
-		read(fileDesc, file.data(), fileSize);
-	}
-
-	close(fileDesc);
-	
-	auto lines = SplitDelim(file, '\n');
-
-	int parenCount = 0;
-	int bracketCount = 0;
-	int braceCount = 0;
-
-	bool decimal = false;
-
-	Token currentToken;
-	std::vector<Token> tokens;
-	LexerState lexState = LexerState::NEW_TOKEN;
-
-	auto lineIt = lines.begin();
-	if (lineIt == lines.end()) {
-		return tokens;
-	}
-	auto charIt = (*lineIt).begin();
-
-	for (;;) {
-		if (charIt == (*lineIt).end()) {
-			std::advance(lineIt, 1);
-			if (lineIt == lines.end()) {
-				break;
-			}
-			charIt = (*lineIt).begin();
-			continue;
-		}
-		char c = *charIt;
-		switch (lexState) {
-			case LexerState::NEW_TOKEN:
-				if (isspace(c)) {
-					break;
-				}
-				currentToken.text.push_back(c);
-				if (std::isdigit(c)) {
-					lexState = LexerState::NUMERIC_LITERAL;
-				}
-				if (g_OperatorMap.contains(&c)) {
-					lexState = LexerState::OPERATOR;
-				}
-				if (isalpha(c)) {
-					lexState = LexerState::SYMBOL;
-				}
-				if (c == '\'') {
-					currentToken.text.pop_back();
-					lexState = LexerState::CHAR_LITERAL;
-				}
-				if (c == '\"') {
-					currentToken.text.pop_back();
-					lexState = LexerState::STRING_LITERAL;
-				}
-				if (std::string("()[]{}").find(c) != -1) {
-					switch (c) {
-						case '(':
-							++parenCount;
-							currentToken.type = TokenType::PAREN_OPEN;
-							break;
-						case ')':
-							--parenCount;
-							currentToken.type = TokenType::PAREN_CLOSE;
-							break;
-						case '[':
-							++bracketCount;
-							currentToken.type = TokenType::BRACKET_OPEN;
-							break;
-						case ']':
-							--bracketCount;
-							currentToken.type = TokenType::BRACKET_CLOSE;
-							break;
-						case '{':
-							++braceCount;
-							currentToken.type = TokenType::BRACE_OPEN;
-							break;
-						case '}':
-							--braceCount;
-							currentToken.type = TokenType::BRACE_CLOSE;
-							break;
-					}
-					lexState = LexerState::COMPLETE_TOKEN;
-				}
+		const char *name;
+		switch (t) {
+			case skyfauna::Lexer::State::BAD:
+				name = "BAD";
 				break;
 
-			case LexerState::NUMERIC_LITERAL:
-				if (c == '.') {
-					if (decimal == true) {
-						throw std::runtime_error(std::format("Syntax Error: too many decimal points in number\n{}", *lineIt));
-					}
-					decimal = true;
-					currentToken.text.push_back(c);
-					break;
-				}
-				if (isdigit(c)) {
-					currentToken.text.push_back(c);
-				} else {
-					if (decimal) {
-						currentToken.value = std::stod(currentToken.text);
-						decimal = false;
-					} else {
-						currentToken.value = std::stoll(currentToken.text);
-					}
-					currentToken.type = decimal ? TokenType::DECIMAL_LITERAL : TokenType::INT_LITERAL;
-					lexState = LexerState::COMPLETE_TOKEN;
-					continue;
-				}
+			case skyfauna::Lexer::State::NEW_TOKEN:
+				name = "NEW_TOKEN";
 				break;
 
-			case LexerState::OPERATOR:
-				currentToken.text.push_back(c);
-				if (!g_OperatorMap.contains(currentToken.text)) {
-					currentToken.text.pop_back();
-					currentToken.type = g_OperatorMap.at(currentToken.text);
-					lexState = LexerState::COMPLETE_TOKEN;
-					continue;
-				}
+			case skyfauna::Lexer::State::NUMERIC_LITERAL:
+				name = "NUMERIC_LITERAL";
 				break;
 
-			case LexerState::SYMBOL:
-				if (std::isalnum(c)) {
-					currentToken.text.push_back(c);
-				} else {
-					if (g_Keywords.contains(currentToken.text)) {
-						currentToken.type = TokenType::KEYWORD;
-					} else {
-						currentToken.type = TokenType::SYMBOL;
-					}
-					lexState = LexerState::COMPLETE_TOKEN;
-					continue;
-				}
+			case skyfauna::Lexer::State::STRING_LITERAL:
+				name = "STRING_LITERAL";
 				break;
 
-			case LexerState::CHAR_LITERAL:
-				if (c == '\'') {
-					if (currentToken.text.length() > 1) {
-						throw std::runtime_error("Syntax Error: Expected \"\'\"");
-					}
-					currentToken.type = TokenType::CHAR_LITERAL;
-					lexState = LexerState::COMPLETE_TOKEN;
-				} else {
-					currentToken.text.push_back(c);
-				}
+			case skyfauna::Lexer::State::CHAR_LITERAL:
+				name = "CHAR_LITERAL";
 				break;
 
-			case LexerState::STRING_LITERAL:
-				if (c == '\"') {
-					currentToken.type = TokenType::STRING_LITERAL;
-					lexState = LexerState::COMPLETE_TOKEN;
-				} else {
-					currentToken.text.push_back(c);
-				}
+			case skyfauna::Lexer::State::OPERATOR:
+				name = "OPERATOR";
 				break;
 
-			case LexerState::COMPLETE_TOKEN:
-				tokens.push_back(currentToken);
-				currentToken = Token();
-				lexState = LexerState::NEW_TOKEN;
-				continue;
+			case skyfauna::Lexer::State::DELIMITER:
+				name = "DELIMITER";
+				break;
+
+			case skyfauna::Lexer::State::IDENTIFIER:
+				name = "IDENTIFIER";
+				break;
+
+			case skyfauna::Lexer::State::LINE_COMMENT:
+				name = "LINE_COMMENT";
+				break;
+
+			case skyfauna::Lexer::State::BLOCK_COMMENT:
+				name = "BLOCK_COMMENT";
+				break;
+
+			case skyfauna::Lexer::State::COMPLETE_TOKEN:
+				name = "COMPLETE_TOKEN";
+				break;
+
+			case skyfauna::Lexer::State::EOF_TOKEN:
+				name = "EOF_TOKEN";
+				break;
 
 			default:
-				throw std::runtime_error("Unknown lexer state.");
+				throw std::runtime_error("fmt: invalid State");
 		}
-		std::advance(charIt, 1);
+		return format_to(ctx.out(), "{}", name);
+	}
+};
+}
+
+namespace skyfauna {
+Lexer::Lexer(std::string&& code) noexcept
+ : m_Code(std::move(code))
+{
+}
+
+std::vector<Token>& Lexer::Tokenize()
+{
+	if (m_Tokens.size() != 0) {
+		SF_WARN("Lexer::Tokenize() called with full buffer");
+		m_Tokens.clear();
 	}
 
-	if (parenCount != 0) {
-		throw std::runtime_error("Syntax Error: Unbalaced parentheses (\"()\").");
-	}
-	if (bracketCount != 0) {
-		throw std::runtime_error("Syntax Error: Unbalaced brackets (\"[]\").");
-	}
-	if (braceCount != 0) {
-		throw std::runtime_error("Syntax Error: Unbalaced braces (\"{}\").");
-	}
+	m_Tokens.reserve(1024);
+	m_State = State::NEW_TOKEN;
+	m_CToken = Token();
 
-	return tokens;
+	int a = 0;
+	auto it = m_Code.cbegin();
+	for (; it != m_Code.cend();) {
+		auto c = *it;
+		a = Transition(c);
+		
+		// This is not in the for to conditionally avoid incrementing in
+		// steps that don't consume characters, using `continue`
+		std::advance(it, a);
+	}
+	while (m_State != State::BAD && m_State != State::NEW_TOKEN)
+		if (Transition('\0') != 0)
+			break;
+	if (m_CToken.text.length() > 0) {
+		m_CToken.type = skyfauna::TokenType::INVALID;
+		m_Tokens.emplace_back(std::move(m_CToken));
+	}
+	m_Tokens.emplace_back(TokenType::PUNCTUATOR, PuncType::DELIMITER, "EOF", 0);
+
+	m_Tokens.shrink_to_fit();
+	return m_Tokens;
+}
+
+int Lexer::Transition(char c)
+{
+	// Early return in switch on success, break on invalid which
+	// throws std::logic_error
+	switch (m_State) {
+		case State::BAD:
+			if (m_RecoveryFunc && m_RecoveryFunc(c)) {
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			} else {
+				m_CToken.text.push_back(c);
+				return 1;
+			}
+			break;
+
+		case State::NEW_TOKEN:
+			if (c == '\0') {
+				throw std::runtime_error("unexpexted null terminator");
+			}
+			if (std::isspace(c)) {
+				return 1;
+			}
+			m_CToken.text.push_back(c);
+			if (std::isalpha(c)) {
+				m_State = State::IDENTIFIER;
+				m_CToken.type = TokenType::IDENTIFIER;
+				m_RecoveryFunc = [](char c){ return !std::isalnum(c); };
+			} else if (std::isdigit(c)) {
+				m_State = State::NUMERIC_LITERAL;
+				m_CToken.type = TokenType::LITERAL;
+				m_RecoveryFunc = [](char c){
+					return !(std::isalnum(c) || c == '.');
+				};
+			} else if (c == '\'') {
+				m_State = State::CHAR_LITERAL;
+				m_CToken.type = TokenType::LITERAL;
+				m_CToken.subtype = LiteralType::CHAR;
+				m_RecoveryFunc = [](char c){
+					return (std::ispunct(c) || std::isspace(c));
+				};
+			} else if (c == '\"') {
+				m_State = State::STRING_LITERAL;
+				m_CToken.type = TokenType::LITERAL;
+				m_CToken.subtype = LiteralType::STRING;
+				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
+			} else if (std::ispunct(c)) {
+				m_State = State::PUNCTUATOR;
+				m_CToken.type = TokenType::PUNCTUATOR;
+				m_RecoveryFunc = [](char c){ (void)c; return true; };
+			} else {
+				m_State = State::BAD;
+				m_CToken.type = TokenType::INVALID;
+				m_RecoveryFunc = [](char c){ return std::isprint(c); };
+			}
+			return 1;
+
+		case State::NUMERIC_LITERAL:
+			if (c == '.') {
+				if (m_CToken.text.find('.') != m_CToken.text.npos)
+					m_State = State::BAD;
+			} else if (std::isdigit(c)) {
+			} else if (std::isalpha(c)) {
+				m_State = State::BAD;
+			} else {
+				if (m_CToken.text.find('.') != m_CToken.text.npos) {
+					m_CToken.subtype = LiteralType::FLOATING_POINT;
+					m_CToken.value = std::make_any<float>(std::atof(m_CToken.text.c_str()));
+				} else {
+					m_CToken.subtype = LiteralType::INTEGER;
+					m_CToken.value = std::make_any<int>(std::atoi(m_CToken.text.c_str()));
+				}
+				m_State = Lexer::State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::STRING_LITERAL:
+			if (c == '\"') {
+				m_State = State::COMPLETE_TOKEN;
+			} else if (c == '\n') {
+				m_State = State::BAD;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::CHAR_LITERAL:
+			if (c == '\'') {
+				m_State = State::COMPLETE_TOKEN;
+			} else if (c == '\n') {
+				m_State = State::BAD;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::PUNCTUATOR: {
+			bool cdelim = false, cop = false;
+			if (m_CToken.text.length() == 2) {
+				if (std::strncmp(m_CToken.text.c_str(), "//", 2) == 0) {
+					m_State = State::LINE_COMMENT;
+				} else if (std::strncmp(m_CToken.text.c_str(), "/*", 2) == 0) {
+					m_State = State::BLOCK_COMMENT;
+				}
+				if (m_State == State::LINE_COMMENT || m_State == State::BLOCK_COMMENT) {
+					m_CToken.text.push_back(c);
+					return 1;
+				}
+			}
+			for (const auto& delim : g_Delimiters) {
+				if (std::strstr(delim.data(), m_CToken.text.data())) {
+					cdelim = true;
+					break;
+				}
+			}
+			for (const auto& op : g_Operators) {
+				if (std::strstr(op.data(), m_CToken.text.data())) {
+					cop = true;
+					break;
+				}
+			}
+			if (cop && cdelim) {
+			} else if (cop) {
+				m_State = State::OPERATOR;
+				return 0;
+			} else if (cdelim) {
+				m_State = State::DELIMITER;
+				return 0;
+			} else if (m_CToken.text.length() == 1) {
+				m_State = State::BAD;
+				return 0;
+			} else {
+				m_CToken.subtype = PuncType::INVALID;
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+		}
+
+		case State::OPERATOR: {
+			bool cop = false;
+			for (const auto& op : g_Operators) {
+				if (std::strstr(op.data(), m_CToken.text.data())) {
+					cop = true;
+					break;
+				}
+			}
+			if (!cop && (m_CToken.text.length() == 1)) {
+				m_State = State::BAD;
+				return 0;
+			} else if (cop) {
+				m_CToken.subtype = PuncType::OPERATOR;
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+		}
+
+		case State::DELIMITER: {
+			bool cdelim = false;
+			for (const auto& delim : g_Delimiters) {
+				if (std::strstr(delim.data(), m_CToken.text.data())) {
+					cdelim = true;
+					break;
+				}
+			}
+			if (!cdelim && (m_CToken.text.length() == 1)) {
+				m_State = State::BAD;
+				return 0;
+			} else if (cdelim) {
+				m_CToken.subtype = PuncType::DELIMITER;
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+		}
+
+		case State::IDENTIFIER:
+			if (!std::isalnum(c)) {
+				std::string_view text(m_CToken.text);
+				auto it = std::find(g_KeywordHashes.begin(),
+						   g_KeywordHashes.end(),
+						   Hash(text));
+				if (it == g_KeywordHashes.end()) {
+					m_CToken.subtype = IdentifierType::SYMBOL;
+				} else {
+					m_CToken.subtype = IdentifierType::KEYWORD;
+				}
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::LINE_COMMENT:
+			if (c == '\n') {
+				m_CToken.subtype = CommentType::LINE;
+				m_CToken.type = TokenType::COMMENT;
+				m_State = State::COMPLETE_TOKEN;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::BLOCK_COMMENT: {
+			m_CToken.text.push_back(c);
+			auto off = (m_CToken.text.length() - 2); 
+			if (std::strncmp(m_CToken.text.data() + off, "*/", 2) == 0) {
+				m_CToken.subtype = CommentType::BLOCK;
+				m_CToken.type = TokenType::COMMENT;
+				m_State = State::COMPLETE_TOKEN;
+			}
+			return 1;
+		}
+
+		case State::COMPLETE_TOKEN:
+			m_Tokens.emplace_back(std::move(m_CToken));
+			m_CToken = Token();
+			m_State = State::NEW_TOKEN;
+			return 0;
+
+		default:;
+	}
+	throw std::logic_error(fmt::format("invalid transition from {} with '{}'",
+						   m_State, c));
+}
 }
 

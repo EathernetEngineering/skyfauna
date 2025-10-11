@@ -11,6 +11,9 @@ include(CMakePackageConfigHelpers)
 option(SKYFAUNA_BUILD_TESTS "Build tests" OFF)
 option(SKYFAUNA_FIND_GOOGLETEST "Use find_package to find googletest. Alternatively set SKYFAUNA_GOOGLETEST_DIR" ON)
 
+option(SKYFAUNA_ENABLE_ASSERTIONS "Allow assertions at runtime" OFF)
+
+add_subdirectory(skyfauna-common)
 add_subdirectory(skyfauna)
 add_subdirectory(skyfauna-cli)
 
@@ -19,7 +22,7 @@ if (SKYFAUNA_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-install(TARGETS skyfauna skyfauna-cli
+install(TARGETS skyfauna-common skyfauna skyfauna-cli
 	EXPORT skyfaunaTargets
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -60,3 +60,9 @@ function(skyfauna_add_unit_test)
 	set_property(TARGET ${target} PROPERTY FOLDER "skyfauna tests")
 endfunction()
 
+skyfauna_add_unit_test(
+	TARGET lex
+	SRCS lex.cpp
+	LIBS skyfauna
+)
+

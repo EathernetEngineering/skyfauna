@@ -14,10 +14,10 @@ target_include_directories(skyfauna-cli PRIVATE
 	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(skyfauna-cli PRIVATE skyfauna)
-set_target_properties(skyfauna PROPERTIES
+set_target_properties(skyfauna-cli PROPERTIES
 	CXX_STANDARD 20
 	CXX_STANDARD_REQUIRED ON
-	OUTPUT_NAME "skyfauna"
+	OUTPUT_NAME "sfc"
 )
 
 add_executable(skyfauna::cli ALIAS skyfauna-cli)
