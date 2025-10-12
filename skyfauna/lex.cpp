@@ -193,14 +193,14 @@ int Lexer::Transition(char c)
 			} else if (c == '\'') {
 				m_State = State::CHAR_LITERAL;
 				m_CToken.type = TokenType::LITERAL;
-				m_CToken.subtype = LiteralType::CHAR;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::CHAR);
 				m_RecoveryFunc = [](char c){
 					return (std::ispunct(c) || std::isspace(c));
 				};
 			} else if (c == '\"') {
 				m_State = State::STRING_LITERAL;
 				m_CToken.type = TokenType::LITERAL;
-				m_CToken.subtype = LiteralType::STRING;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::STRING);
 				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
 			} else if (std::ispunct(c)) {
 				m_State = State::PUNCTUATOR;
@@ -222,10 +222,10 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 			} else {
 				if (m_CToken.text.find('.') != m_CToken.text.npos) {
-					m_CToken.subtype = LiteralType::FLOATING_POINT;
+					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::FLOATING_POINT);
 					m_CToken.value = std::make_any<float>(std::atof(m_CToken.text.c_str()));
 				} else {
-					m_CToken.subtype = LiteralType::INTEGER;
+					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::INTEGER);
 					m_CToken.value = std::make_any<int>(std::atoi(m_CToken.text.c_str()));
 				}
 				m_State = Lexer::State::COMPLETE_TOKEN;
@@ -290,7 +290,7 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 				return 0;
 			} else {
-				m_CToken.subtype = PuncType::INVALID;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::INVALID);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
@@ -310,7 +310,7 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 				return 0;
 			} else if (cop) {
-				m_CToken.subtype = PuncType::OPERATOR;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::OPERATOR);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
@@ -330,7 +330,7 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 				return 0;
 			} else if (cdelim) {
-				m_CToken.subtype = PuncType::DELIMITER;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::DELIMITER);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
@@ -345,9 +345,9 @@ int Lexer::Transition(char c)
 						   g_KeywordHashes.end(),
 						   Hash(text));
 				if (it == g_KeywordHashes.end()) {
-					m_CToken.subtype = IdentifierType::SYMBOL;
+					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(IdentifierType::SYMBOL);
 				} else {
-					m_CToken.subtype = IdentifierType::KEYWORD;
+					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(IdentifierType::KEYWORD);
 				}
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
@@ -357,7 +357,7 @@ int Lexer::Transition(char c)
 
 		case State::LINE_COMMENT:
 			if (c == '\n') {
-				m_CToken.subtype = CommentType::LINE;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(CommentType::LINE);
 				m_CToken.type = TokenType::COMMENT;
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
@@ -369,7 +369,7 @@ int Lexer::Transition(char c)
 			m_CToken.text.push_back(c);
 			auto off = (m_CToken.text.length() - 2); 
 			if (std::strncmp(m_CToken.text.data() + off, "*/", 2) == 0) {
-				m_CToken.subtype = CommentType::BLOCK;
+				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(CommentType::BLOCK);
 				m_CToken.type = TokenType::COMMENT;
 				m_State = State::COMPLETE_TOKEN;
 			}

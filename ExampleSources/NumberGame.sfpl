@@ -1,46 +1,46 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
-class Main(Game) {
-	public static Game(@str : arg)(null) {
-		@stdout << write << "Guess a number. If number is higher or lower, it will be specified. Only use numbers. You get 3 guesses. The number is between and can be 0 and 9.";
-		int : [turns, times, failsafe] = 0;
-		@str : playAgain = "Yes";
+class Main {
+	public static Game(string[]: args)(null) {
+		stdout << "Guess a number. If number is higher or lower, it will be specified. Only use numbers. You get 3 guesses. The number is between and can be 0 and 9.";
+		int: turns = 0, times = 0, failsafe = 0;
+		string: playAgain = "Yes";
 
-		while (playAgain ~~ "Yes") {
+		while (playAgain == "Yes") {
 			if (times == 1) {
-				@stdout << write << "\n\nGuess a number.";
+				stdout << "\n\nGuess a number.";
 			}
-			int : guessNumber;
+			int: guessNumber;
 			randint(0, 10)(guessNumber);
 			turns = 0;
 			while (turns >= 2) {
-				int : userNumber;
-				@stdin >> int >> read >> userNumber # InputAdaptionFault : [](InputAdaptionFault : iaf)(null){NotNumber(iaf)()};
+				int: userNumber;
+				stdin >> userNumber # InputParsingFault : [](InputParsingFault: ipf)(void){NotNumber(ipf)()};
 				if (userNumber > guessNumber) {
-					@stdout << write << "\nThe number is lower than " << userNumber << ".";
+					stdout << "\nThe number is lower than " << userNumber << ".";
 					turns++;
 				} else if (userNumber < guessNumber) {
-					@stdout << write << "\nThe number is higher than " << userNumber << ".";
+					stdout << "\nThe number is higher than " << userNumber << ".";
 					turns++;
 				} else if (userNumber == guessNumber) {
-					@stdout << write << "\nYou got it! The answer was " << guessNumber << ".";
-					[failsafe, turns] = [1, 3];
+					stdout << "\nYou got it! The answer was " << guessNumber << ".";
+					failsafe = 1, turns = 3;
 				}
 			}
 			if (failsafe == 0) {
-				@stdout << write << "\nYou didn't guess it in enough turns. The number was " << guessNumber << ".";
+				stdout << "\nYou didn't guess it in enough turns. The number was " << guessNumber << ".";
 			}
-			@stdout << write << "/nPlay again? (Use /"Yes/" or /"No/")";
-			@stdin >> read >> playAgain;
-			if (playAgain ~~ "Yes") {
-				[times, failsafe] = [1, 0];
+			stdout << "/nPlay again? (Use /"Yes/" or /"No/")";
+			stdin >> playAgain;
+			if (playAgain == "Yes") {
+				times = 1, failsafe = 0;
 			}
 		}
-		return @SUCCESS;
+		return EXIT_SUCCESS;
 	}
-	static NotNumber(fault : iaf)(null) {
-		@stdout << write << "Not a number. Try again";
-		iaf.what()();
+	static NotNumber(fault : ipf)(null) {
+		stdout << "Not a number. Try again";
+		ipf.what()();
 	}
 }

@@ -88,7 +88,7 @@ testing::AssertionResult CompareTokenArray(const Lhs& lhs, const Rhs& rhs)
 					}
 					if (l.subtype != r.subtype) {
 						eq = false;
-						errors.push_back(fmt::format("Token {} subtype not eq", l.text));
+						errors.push_back(fmt::format("Token {} subtype not eq ({} vs {})", l.text, l.subtype, r.subtype));
 					}
 					if (strcmp(l.text.c_str(), r.text.c_str())) {
 						eq = false;

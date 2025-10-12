@@ -10,14 +10,14 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 #include <cstdint>
 
 #include <spdlog/fmt/fmt.h>
 
 namespace skyfauna {
-enum class TokenType : uint32_t {
+typedef uint32_t TokenTypesBase;
+enum class TokenType : TokenTypesBase {
 	INVALID = 0,
 	IDENTIFIER,
 	LITERAL,
@@ -26,13 +26,13 @@ enum class TokenType : uint32_t {
 	COMMENT,
 };
 
-enum class IdentifierType : uint32_t {
+enum class IdentifierType : TokenTypesBase {
 	INVALID = 0,
 	KEYWORD,
 	SYMBOL
 };
 
-enum class LiteralType : uint32_t {
+enum class LiteralType : TokenTypesBase {
 	INVALID = 0,
 	INTEGER,
 	FLOATING_POINT,
@@ -40,13 +40,13 @@ enum class LiteralType : uint32_t {
 	CHAR
 };
 
-enum class PuncType : uint32_t {
+enum class PuncType : TokenTypesBase {
 	INVALID = 0,
 	OPERATOR,
 	DELIMITER
 };
 
-enum class CommentType : uint32_t {
+enum class CommentType : TokenTypesBase {
 	INVALID = 0,
 	LINE,
 	BLOCK
@@ -58,29 +58,38 @@ concept TokenSubtype = std::same_as<ST, IdentifierType> ||
 	std::same_as<ST, PuncType> ||
 	std::same_as<ST, CommentType>;
 
+template<typename To, typename From>
+requires (TokenSubtype<To> || std::same_as<To, TokenTypesBase>) &&
+	(TokenSubtype<From> || std::same_as<From, TokenTypesBase>)
+constexpr To ConvertSubtype(From other) {
+	return static_cast<To>(static_cast<TokenTypesBase>(other));
+}
+
 struct Token {
 	skyfauna::TokenType type = skyfauna::TokenType::INVALID;
-	std::variant<IdentifierType, LiteralType, PuncType, CommentType> subtype =
-		{IdentifierType::INVALID};
+	TokenTypesBase subtype =
+		{ConvertSubtype<TokenTypesBase>(IdentifierType::INVALID)};
 	std::string text;
 	std::any value;
 
 	Token()
-	 : type(skyfauna::TokenType::INVALID), subtype(IdentifierType::INVALID),
+	 : type(skyfauna::TokenType::INVALID),
+		subtype(ConvertSubtype<TokenTypesBase>(IdentifierType::INVALID)),
 		text(std::move([](){ std::string s; s.reserve(16); return s; }()))
 	{}
 
 	template<typename ST>
 	requires TokenSubtype<ST>
 	Token(skyfauna::TokenType type, ST subtype, std::string text)
-	 : type(type), subtype(subtype), text(std::move(text))
+	 : type(type), subtype(ConvertSubtype<TokenTypesBase, ST>(subtype)),
+		text(std::move(text))
 	{}
 
 	template<typename ST, typename T>
 	requires TokenSubtype<ST>
 	Token(skyfauna::TokenType type, ST subtype, std::string text, T value)
-	 : type(type), subtype(subtype), text(std::move(text)),
-		value(std::make_any<T>(std::move(value)))
+	 : type(type), subtype(ConvertSubtype<TokenTypesBase, ST>(subtype)),
+		text(std::move(text)), value(std::make_any<T>(std::move(value)))
 	{}
 
 	Token(Token&&) noexcept = default;
@@ -88,6 +97,12 @@ struct Token {
 	Token(const Token&) = default;
 	Token& operator=(const Token&) = default;
 };
+
+template<typename ST>
+requires TokenSubtype<ST> || std::same_as<ST, uint32_t>
+ST GetTokenSubtype(const Token& t) {
+	return 0;
+}
 }
 
 namespace fmt {
@@ -243,19 +258,27 @@ struct formatter<skyfauna::Token> : formatter<std::string> {
 		switch (tok.type) {
 			case skyfauna::TokenType::IDENTIFIER:
 				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
-					 tok.type, std::get<skyfauna::IdentifierType>(tok.subtype), tok.text);
+					 tok.type,
+					 skyfauna::ConvertSubtype<skyfauna::IdentifierType>(tok.subtype),
+					 tok.text);
 
 			case skyfauna::TokenType::PUNCTUATOR:
 				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
-					 tok.type, std::get<skyfauna::PuncType>(tok.subtype), tok.text);
+					 tok.type,
+					 skyfauna::ConvertSubtype<skyfauna::PuncType>(tok.subtype),
+					 tok.text);
 
 			case skyfauna::TokenType::LITERAL:
 				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
-					 tok.type, std::get<skyfauna::LiteralType>(tok.subtype), tok.text);
+					 tok.type,
+					 skyfauna::ConvertSubtype<skyfauna::LiteralType>(tok.subtype),
+					 tok.text);
 
 			case skyfauna::TokenType::COMMENT:
 				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
-					 tok.type, std::get<skyfauna::CommentType>(tok.subtype), tok.text);
+					 tok.type,
+					 skyfauna::ConvertSubtype<skyfauna::CommentType>(tok.subtype),
+					 tok.text);
 
 			default:
 				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [TEXT]: {} ",
