@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2025 Chloe Eather
 
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.3...4.0)
 
 add_library(skyfauna-common STATIC log.cpp util.cpp)
 target_include_directories(skyfauna-common PUBLIC

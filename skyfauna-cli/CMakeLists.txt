@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2025 Chloe Eather
 
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.3...4.0)
 
 set(SKYFAUNA_CLI_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
