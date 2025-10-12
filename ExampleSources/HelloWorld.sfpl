@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
+#include <print>
+#define MY_PRINT_MACRO(...) \
+	print(vargs)()
+
 class Main {
 	public static main(string[]: args)(void) {
-		print("Hello, World")();
+		MY_PRINT_MACRO("Hello, World")();
 	}
 };

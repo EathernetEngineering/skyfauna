@@ -367,12 +367,21 @@ public:
 
 private:
 	int Transition(char c);
+	inline char Peek(int distance) {
+		auto pos = m_CodeIt + distance;
+		if (pos >= m_Code.cend())
+			throw std::range_error(fmt::format("Lexer::Peek: it + distance "
+									  "(which is {}) >= m_Code.size() (which is {})",
+									  std::distance(m_Code.cbegin(), pos), m_Code.size()));
+		return *pos;
+	}
 
 private:
 	std::string m_Code;
 	std::vector<Token> m_Tokens;
 	State m_State;
 	Token m_CToken;
+	std::string::const_iterator m_CodeIt;
 	std::function<bool(char)> m_RecoveryFunc;
 
 	friend struct fmt::formatter<State>;

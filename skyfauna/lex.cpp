@@ -134,14 +134,14 @@ std::vector<Token>& Lexer::Tokenize()
 	m_CToken = Token();
 
 	int a = 0;
-	auto it = m_Code.cbegin();
-	for (; it != m_Code.cend();) {
-		auto c = *it;
+	m_CodeIt = m_Code.cbegin();
+	for (; m_CodeIt != m_Code.cend();) {
+		auto c = *m_CodeIt;
 		a = Transition(c);
 		
 		// This is not in the for to conditionally avoid incrementing in
 		// steps that don't consume characters, using `continue`
-		std::advance(it, a);
+		std::advance(m_CodeIt, a);
 	}
 	while (m_State != State::BAD && m_State != State::NEW_TOKEN)
 		if (Transition('\0') != 0)
@@ -179,7 +179,7 @@ int Lexer::Transition(char c)
 				return 1;
 			}
 			m_CToken.text.push_back(c);
-			if (std::isalpha(c)) {
+			if (std::isalpha(c) || c == '_') {
 				m_State = State::IDENTIFIER;
 				m_CToken.type = TokenType::IDENTIFIER;
 				m_RecoveryFunc = [](char c){ return !std::isalnum(c); };
@@ -201,11 +201,11 @@ int Lexer::Transition(char c)
 				m_CToken.type = TokenType::LITERAL;
 				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::STRING);
 				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
-			// } else if (c == '#') {
-			// 	m_State = State::PREPROCESSOR_DIRECTIVE;
-			// 	m_CToken.type = TokenType::PREPROCESSOR_DIRECTIVE;
-			// 	m_CToken.subtype = 0;
-			// 	m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
+			} else if (c == '#') {
+				m_State = State::PREPROCESSOR_DIRECTIVE;
+				m_CToken.type = TokenType::PREPROCESSOR_DIRECTIVE;
+				m_CToken.subtype = 0;
+				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
 			} else if (std::ispunct(c)) {
 				m_State = State::PUNCTUATOR;
 				m_CToken.type = TokenType::PUNCTUATOR;
@@ -253,6 +253,16 @@ int Lexer::Transition(char c)
 				m_State = State::COMPLETE_TOKEN;
 			} else if (c == '\n') {
 				m_State = State::BAD;
+				return 0;
+			}
+			m_CToken.text.push_back(c);
+			return 1;
+
+		case State::PREPROCESSOR_DIRECTIVE:
+			if (c == '\\' && Peek(1) == '\n') {
+				return 2;
+			} else if (c == '\n') {
+				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
 			m_CToken.text.push_back(c);
@@ -343,7 +353,7 @@ int Lexer::Transition(char c)
 		}
 
 		case State::IDENTIFIER:
-			if (!std::isalnum(c)) {
+			if (!std::isalnum(c) && c != '_') {
 				std::string_view text(m_CToken.text);
 				auto it = std::find(g_KeywordHashes.begin(),
 						   g_KeywordHashes.end(),
