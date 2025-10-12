@@ -22,53 +22,53 @@ const std::string_view g_TestCode =
 	"	}"
 	"};";
 std::array g_TestCodeExpextedTokens = std::to_array({
-	skyfauna::Token(skyfauna::TokenType::COMMENT, skyfauna::CommentType::LINE, "// Line comment"),
-	skyfauna::Token(skyfauna::TokenType::COMMENT, skyfauna::CommentType::BLOCK, "/* Block \ncomment */"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "class"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "Main"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "{"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "public"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "static"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "main"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "("),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "string"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "["),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "]"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ":"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "args"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ")"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "("),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "void"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ")"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "{"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "ptr"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ":"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "address"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::OPERATOR, "="),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::KEYWORD, "null"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ";"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "print"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "("),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "args"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "["),
-	skyfauna::Token(skyfauna::TokenType::LITERAL, skyfauna::LiteralType::INTEGER, "0"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "]"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ")"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ";"),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "print"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "("),
-	skyfauna::Token(skyfauna::TokenType::IDENTIFIER, skyfauna::IdentifierType::SYMBOL, "args"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "["),
-	skyfauna::Token(skyfauna::TokenType::LITERAL, skyfauna::LiteralType::INTEGER, "0"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::OPERATOR, "+"),
-	skyfauna::Token(skyfauna::TokenType::LITERAL, skyfauna::LiteralType::INTEGER, "1"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "]"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ")"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ";"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "}"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "}"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, ";"),
-	skyfauna::Token(skyfauna::TokenType::PUNCTUATOR, skyfauna::PuncType::DELIMITER, "EOF"),
+	skyfauna::Token(skyfauna::TTComment::LINE, "// Line comment"),
+	skyfauna::Token(skyfauna::TTComment::BLOCK, "/* Block \ncomment */"),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "class"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "Main"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "{"),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "public"),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "static"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "main"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "("),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "string"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "["),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "]"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ":"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "args"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ")"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "("),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "void"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ")"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "{"),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "ptr"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ":"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "address"),
+	skyfauna::Token(skyfauna::TTPuncuator::OPERATOR, "="),
+	skyfauna::Token(skyfauna::TTIdentifier::KEYWORD, "null"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ";"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "print"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "("),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "args"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "["),
+	skyfauna::Token(skyfauna::TTLiteral::INTEGER, "0"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "]"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ")"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ";"),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "print"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "("),
+	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "args"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "["),
+	skyfauna::Token(skyfauna::TTLiteral::INTEGER, "0"),
+	skyfauna::Token(skyfauna::TTPuncuator::OPERATOR, "+"),
+	skyfauna::Token(skyfauna::TTLiteral::INTEGER, "1"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "]"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ")"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ";"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "}"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "}"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, ";"),
+	skyfauna::Token(skyfauna::TTPuncuator::DELIMITER, "EOF"),
 });
 
 template<typename Lhs, typename Rhs>
@@ -82,17 +82,17 @@ testing::AssertionResult CompareTokenArray(const Lhs& lhs, const Rhs& rhs)
 	if (std::equal(lhs.begin(), lhs.end(), rhs.begin(),
 				   [&errors](const skyfauna::Token& l, const skyfauna::Token& r){
 					bool eq = true;
-					if (l.type != r.type) {
+					if (l.type() != r.type()) {
 						eq = false;
-						errors.push_back(fmt::format("Token {} type not eq ({} vs {})", l.text, l.type, r.type));
+						errors.push_back(fmt::format("Token {} type not eq ({} vs {})", l.text(), l.type(), r.type()));
 					}
-					if (l.subtype != r.subtype) {
+					if (l.type() != r.type()) {
 						eq = false;
-						errors.push_back(fmt::format("Token {} subtype not eq ({} vs {})", l.text, l.subtype, r.subtype));
+						errors.push_back(fmt::format("Token {} subtype not eq ({} vs {})", l.text(), l.type(), r.type()));
 					}
-					if (strcmp(l.text.c_str(), r.text.c_str())) {
+					if (strcmp(l.text().c_str(), r.text().c_str())) {
 						eq = false;
-						errors.push_back(fmt::format("Token {} text not eq ({})", l.text, r.text));
+						errors.push_back(fmt::format("Token {} text not eq ({})", l.text(), r.text()));
 					}
 					return eq;
 				   })) {

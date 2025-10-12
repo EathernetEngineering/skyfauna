@@ -146,11 +146,12 @@ std::vector<Token>& Lexer::Tokenize()
 	while (m_State != State::BAD && m_State != State::NEW_TOKEN)
 		if (Transition('\0') != 0)
 			break;
-	if (m_CToken.text.length() > 0) {
-		m_CToken.type = skyfauna::TokenType::INVALID;
+	if (m_CToken.text().length() > 0) {
+		// Sets the category to invalid
+		m_CToken.type() &= AnySpecificTokenTypeMask();
 		m_Tokens.emplace_back(std::move(m_CToken));
 	}
-	m_Tokens.emplace_back(TokenType::PUNCTUATOR, PuncType::DELIMITER, "EOF", 0);
+	m_Tokens.emplace_back(TTPuncuator::DELIMITER, "EOF");
 
 	m_Tokens.shrink_to_fit();
 	return m_Tokens;
@@ -166,7 +167,7 @@ int Lexer::Transition(char c)
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			} else {
-				m_CToken.text.push_back(c);
+				m_CToken.text().push_back(c);
 				return 1;
 			}
 			break;
@@ -178,64 +179,62 @@ int Lexer::Transition(char c)
 			if (std::isspace(c)) {
 				return 1;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			if (std::isalpha(c) || c == '_') {
 				m_State = State::IDENTIFIER;
-				m_CToken.type = TokenType::IDENTIFIER;
+				m_CToken.type() &= CastTokenType<TokenType>(TokenCategory::IDENTIFIER);
 				m_RecoveryFunc = [](char c){ return !std::isalnum(c); };
 			} else if (std::isdigit(c)) {
 				m_State = State::NUMERIC_LITERAL;
-				m_CToken.type = TokenType::LITERAL;
+				m_CToken.type() &= CastTokenType<TokenType>(TokenCategory::LITERAL);
 				m_RecoveryFunc = [](char c){
 					return !(std::isalnum(c) || c == '.');
 				};
 			} else if (c == '\'') {
 				m_State = State::CHAR_LITERAL;
-				m_CToken.type = TokenType::LITERAL;
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::CHAR);
+				m_CToken.type() = CastTokenType<TokenType>(TTLiteral::CHAR);
 				m_RecoveryFunc = [](char c){
 					return (std::ispunct(c) || std::isspace(c));
 				};
 			} else if (c == '\"') {
 				m_State = State::STRING_LITERAL;
-				m_CToken.type = TokenType::LITERAL;
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::STRING);
+				m_CToken.type() = CastTokenType<TokenType>(TTLiteral::STRING);
 				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
 			} else if (c == '#') {
 				m_State = State::PREPROCESSOR_DIRECTIVE;
-				m_CToken.type = TokenType::PREPROCESSOR_DIRECTIVE;
-				m_CToken.subtype = 0;
+				m_CToken.type() &= CastTokenType<TokenType>(TokenCategory::PREPROCESSOR_DIRECTIVE);
+				m_CToken.type() = 0;
 				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
 			} else if (std::ispunct(c)) {
 				m_State = State::PUNCTUATOR;
-				m_CToken.type = TokenType::PUNCTUATOR;
+				m_CToken.type() &= CastTokenType<TokenType>(TokenCategory::PUNCTUATOR);
 				m_RecoveryFunc = [](char c){ (void)c; return true; };
 			} else {
 				m_State = State::BAD;
-				m_CToken.type = TokenType::INVALID;
+				m_CToken.type() &= CastTokenType<TokenType>(TokenCategory::INVALID);
 				m_RecoveryFunc = [](char c){ return std::isprint(c); };
 			}
 			return 1;
 
 		case State::NUMERIC_LITERAL:
 			if (c == '.') {
-				if (m_CToken.text.find('.') != m_CToken.text.npos)
+				if (m_CToken.text().find('.') != m_CToken.text().npos)
 					m_State = State::BAD;
 			} else if (std::isdigit(c)) {
 			} else if (std::isalpha(c)) {
 				m_State = State::BAD;
 			} else {
-				if (m_CToken.text.find('.') != m_CToken.text.npos) {
-					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::FLOATING_POINT);
-					m_CToken.value = std::make_any<float>(std::atof(m_CToken.text.c_str()));
+				if (m_CToken.text().find('.') != m_CToken.text().npos) {
+					m_CToken.type() = CastTokenType<TokenType>(TTLiteral::FLOATING_POINT);
+					m_CToken.value() = std::make_any<float>(std::atof(m_CToken.text().c_str()));
 				} else {
-					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::INTEGER);
-					m_CToken.value = std::make_any<int>(std::atoi(m_CToken.text.c_str()));
+					m_CToken.type() = CastTokenType<TokenType>(TTLiteral::INTEGER);
+					m_CToken.value() = std::make_any<int>(std::atoi(m_CToken.text().c_str()));
 				}
 				m_State = Lexer::State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::STRING_LITERAL:
@@ -245,7 +244,7 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::CHAR_LITERAL:
@@ -255,7 +254,7 @@ int Lexer::Transition(char c)
 				m_State = State::BAD;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::PREPROCESSOR_DIRECTIVE:
@@ -265,30 +264,30 @@ int Lexer::Transition(char c)
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::PUNCTUATOR: {
 			bool cdelim = false, cop = false;
-			if (m_CToken.text.length() == 2) {
-				if (std::strncmp(m_CToken.text.c_str(), "//", 2) == 0) {
+			if (m_CToken.text().length() == 2) {
+				if (std::strncmp(m_CToken.text().c_str(), "//", 2) == 0) {
 					m_State = State::LINE_COMMENT;
-				} else if (std::strncmp(m_CToken.text.c_str(), "/*", 2) == 0) {
+				} else if (std::strncmp(m_CToken.text().c_str(), "/*", 2) == 0) {
 					m_State = State::BLOCK_COMMENT;
 				}
 				if (m_State == State::LINE_COMMENT || m_State == State::BLOCK_COMMENT) {
-					m_CToken.text.push_back(c);
+					m_CToken.text().push_back(c);
 					return 1;
 				}
 			}
 			for (const auto& delim : g_Delimiters) {
-				if (std::strstr(delim.data(), m_CToken.text.data())) {
+				if (std::strstr(delim.data(), m_CToken.text().data())) {
 					cdelim = true;
 					break;
 				}
 			}
 			for (const auto& op : g_Operators) {
-				if (std::strstr(op.data(), m_CToken.text.data())) {
+				if (std::strstr(op.data(), m_CToken.text().data())) {
 					cop = true;
 					break;
 				}
@@ -300,91 +299,89 @@ int Lexer::Transition(char c)
 			} else if (cdelim) {
 				m_State = State::DELIMITER;
 				return 0;
-			} else if (m_CToken.text.length() == 1) {
+			} else if (m_CToken.text().length() == 1) {
 				m_State = State::BAD;
 				return 0;
 			} else {
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::INVALID);
+				m_CToken.type() = CastTokenType<TokenType>(TTPuncuator::INVALID);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 		}
 
 		case State::OPERATOR: {
 			bool cop = false;
 			for (const auto& op : g_Operators) {
-				if (std::strstr(op.data(), m_CToken.text.data())) {
+				if (std::strstr(op.data(), m_CToken.text().data())) {
 					cop = true;
 					break;
 				}
 			}
-			if (!cop && (m_CToken.text.length() == 1)) {
+			if (!cop && (m_CToken.text().length() == 1)) {
 				m_State = State::BAD;
 				return 0;
 			} else if (cop) {
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::OPERATOR);
+				m_CToken.type() = CastTokenType<TokenType>(TTPuncuator::OPERATOR);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 		}
 
 		case State::DELIMITER: {
 			bool cdelim = false;
 			for (const auto& delim : g_Delimiters) {
-				if (std::strstr(delim.data(), m_CToken.text.data())) {
+				if (std::strstr(delim.data(), m_CToken.text().data())) {
 					cdelim = true;
 					break;
 				}
 			}
-			if (!cdelim && (m_CToken.text.length() == 1)) {
+			if (!cdelim && (m_CToken.text().length() == 1)) {
 				m_State = State::BAD;
 				return 0;
 			} else if (cdelim) {
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(PuncType::DELIMITER);
+				m_CToken.type() = CastTokenType<TokenType>(TTPuncuator::DELIMITER);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 		}
 
 		case State::IDENTIFIER:
 			if (!std::isalnum(c) && c != '_') {
-				std::string_view text(m_CToken.text);
+				std::string_view text(m_CToken.text());
 				auto it = std::find(g_KeywordHashes.begin(),
 						   g_KeywordHashes.end(),
 						   Hash(text));
 				if (it == g_KeywordHashes.end()) {
-					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(IdentifierType::SYMBOL);
+					m_CToken.type() = CastTokenType<TokenType>(TTIdentifier::SYMBOL);
 				} else {
-					m_CToken.subtype = ConvertSubtype<TokenTypesBase>(IdentifierType::KEYWORD);
+					m_CToken.type() = CastTokenType<TokenType>(TTIdentifier::KEYWORD);
 				}
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::LINE_COMMENT:
 			if (c == '\n') {
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(CommentType::LINE);
-				m_CToken.type = TokenType::COMMENT;
+				m_CToken.type() = CastTokenType<TokenType>(TTComment::LINE);
 				m_State = State::COMPLETE_TOKEN;
 				return 0;
 			}
-			m_CToken.text.push_back(c);
+			m_CToken.text().push_back(c);
 			return 1;
 
 		case State::BLOCK_COMMENT: {
-			m_CToken.text.push_back(c);
-			auto off = (m_CToken.text.length() - 2); 
-			if (std::strncmp(m_CToken.text.data() + off, "*/", 2) == 0) {
-				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(CommentType::BLOCK);
-				m_CToken.type = TokenType::COMMENT;
+			m_CToken.text().push_back(c);
+			auto off = (m_CToken.text().length() - 2); 
+			if (std::strncmp(m_CToken.text().data() + off, "*/", 2) == 0) {
+				m_CToken.type() = CastTokenType<TokenType>(TTComment::BLOCK);
 				m_State = State::COMPLETE_TOKEN;
 			}
 			return 1;
