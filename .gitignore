@@ -1,4 +1,8 @@
 [Bb]uild/
+[Ex]ternal/
 **.kdev4
+**.vcxproj
+**.vcxproj.*
+**.sln
 .cache/
 

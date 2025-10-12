@@ -3,8 +3,6 @@
 
 cmake_minimum_required(VERSION 4.0)
 
-find_package(spdlog REQUIRED)
-
 add_library(skyfauna-common STATIC log.cpp util.cpp)
 target_include_directories(skyfauna-common PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

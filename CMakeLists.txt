@@ -8,6 +8,12 @@ project(skyfauna VERSION 1.0.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+if (SKYFAUNA_EXTERNAL_SPDLOG)
+	add_subdirectory(${SKYFAUNA_EXTERNAL_SPDLOG})
+else()
+	find_package(spdlog REQUIRED)
+endif()
+
 option(SKYFAUNA_BUILD_TESTS "Build tests" OFF)
 option(SKYFAUNA_FIND_GOOGLETEST "Use find_package to find googletest. Alternatively set SKYFAUNA_GOOGLETEST_DIR" ON)
 
