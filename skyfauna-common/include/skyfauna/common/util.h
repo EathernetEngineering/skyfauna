@@ -6,16 +6,19 @@
 
 #include <skyfauna/common/config.h>
 
-#include <format>
+#include <algorithm>
+#include <iostream>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <spdlog/fmt/fmt.h>
+
 namespace skyfauna::common {
 template<typename... Args>
 inline void assert_message(std::string_view msg, const Args&... args) {
-	std::fprintf(stderr, std::format(msg, std::forward<Args>(args)...));
+	std::cerr << fmt::format(msg, std::forward<Args>(args)...);
 }
 [[noreturn]] void assert_fail(const char *cond, const char *file, int line);
 }
@@ -37,6 +40,9 @@ inline void assert_message(std::string_view msg, const Args&... args) {
 #endif
 #endif
 
+#define BIT(x) (1llu << x)
+
+namespace skyfauna {
 template<typename charT,
 	typename Tr = std::char_traits<charT>,
 	typename Alloc = std::allocator<charT>>
@@ -66,7 +72,6 @@ auto SplitDelim(std::basic_string_view<charT> str, charT delim) {
 	return split;
 }
 
-namespace skyfauna {
 constexpr std::size_t Strlen(const char *str)
 {
 	std::size_t l = 0;

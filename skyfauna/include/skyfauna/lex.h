@@ -4,6 +4,8 @@
 #ifndef SKYFAUNA_LEX_H_
 #define SKYFAUNA_LEX_H_
 
+#include <skyfauna/common/util.h>
+
 #include <any>
 #include <concepts>
 #include <functional>
@@ -16,40 +18,40 @@
 #include <spdlog/fmt/fmt.h>
 
 namespace skyfauna {
-typedef uint32_t TokenTypesBase;
+typedef uint64_t TokenTypesBase;
 enum class TokenType : TokenTypesBase {
 	INVALID = 0,
-	IDENTIFIER,
-	LITERAL,
-	PUNCTUATOR,
-	PREPROCESSOR,
-	COMMENT,
+	IDENTIFIER = BIT(32),
+	LITERAL = BIT(33),
+	PUNCTUATOR = BIT(34),
+	PREPROCESSOR_DIRECTIVE = BIT(35),
+	COMMENT = BIT(36)
 };
 
 enum class IdentifierType : TokenTypesBase {
 	INVALID = 0,
-	KEYWORD,
-	SYMBOL
+	KEYWORD = BIT(0),
+	SYMBOL = BIT(1)
 };
 
 enum class LiteralType : TokenTypesBase {
 	INVALID = 0,
-	INTEGER,
-	FLOATING_POINT,
-	STRING,
-	CHAR
+	INTEGER = BIT(4),
+	FLOATING_POINT = BIT(5),
+	STRING = BIT(6),
+	CHAR = BIT(7)
 };
 
 enum class PuncType : TokenTypesBase {
 	INVALID = 0,
-	OPERATOR,
-	DELIMITER
+	OPERATOR = BIT(8),
+	DELIMITER = BIT(9)
 };
 
 enum class CommentType : TokenTypesBase {
 	INVALID = 0,
-	LINE,
-	BLOCK
+	LINE = BIT(12),
+	BLOCK = BIT(13)
 };
 
 template<typename ST>
@@ -99,194 +101,220 @@ struct Token {
 };
 
 template<typename ST>
-requires TokenSubtype<ST> || std::same_as<ST, uint32_t>
-ST GetTokenSubtype(const Token& t) {
-	return 0;
+requires TokenSubtype<ST> || std::same_as<ST, TokenTypesBase>
+constexpr ST GetTokenSubtype(const Token& t) noexcept {
+	switch (t.type) {
+		case skyfauna::TokenType::IDENTIFIER:
+			return ConvertSubtype<ST>(t.subtype);
+
+		case skyfauna::TokenType::LITERAL:
+			return ConvertSubtype<ST>(t.subtype);
+
+		case skyfauna::TokenType::PUNCTUATOR:
+			return ConvertSubtype<ST>(t.subtype);
+
+		case skyfauna::TokenType::PREPROCESSOR_DIRECTIVE:
+			return ConvertSubtype<ST>(t.subtype);
+
+		case skyfauna::TokenType::COMMENT:
+			return ConvertSubtype<ST>(t.subtype);
+
+		default:
+			return ConvertSubtype<ST>(0u);
+	}
 }
 }
 
-namespace fmt {
 template<>
-struct formatter<skyfauna::TokenType> : formatter<std::string> {
-	auto format(skyfauna::TokenType ls, format_context& ctx) const -> decltype(ctx.out())
+struct fmt::formatter<skyfauna::TokenType> : fmt::formatter<std::string> {
+	auto format(const skyfauna::TokenType& ls, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (ls) {
 			case skyfauna::TokenType::INVALID:
-				name = "INVALID";
+				name = "INVALID"sv;
 				break;
 
 			case skyfauna::TokenType::IDENTIFIER:
-				name = "IDENTIFIER";
+				name = "IDENTIFIER"sv;
 				break;
 
 			case skyfauna::TokenType::LITERAL:
-				name = "LITERAL";
+				name = "LITERAL"sv;
 				break;
 
 			case skyfauna::TokenType::PUNCTUATOR:
-				name = "PUNCTUATOR";
+				name = "PUNCTUATOR"sv;
 				break;
 
-			case skyfauna::TokenType::PREPROCESSOR:
-				name = "PREPROCESSOR";
+			case skyfauna::TokenType::PREPROCESSOR_DIRECTIVE:
+				name = "PREPROCESSOR DIRECTIVE"sv;
 				break;
 
 			case skyfauna::TokenType::COMMENT:
-				name = "COMMENT";
+				name = "COMMENT"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid skyfauna::TokenType");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return fmt::format_to(ctx.out(), "{}", name);
 	}
 };
 
 template<>
-struct formatter<skyfauna::IdentifierType> : formatter<std::string> {
-	auto format(skyfauna::IdentifierType ls, format_context& ctx) const -> decltype(ctx.out())
+struct fmt::formatter<skyfauna::IdentifierType> : fmt::formatter<std::string> {
+	auto format(const skyfauna::IdentifierType& ls, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (ls) {
 			case skyfauna::IdentifierType::INVALID:
-				name = "INVALID";
+				name = "INVALID"sv;
 				break;
 
 			case skyfauna::IdentifierType::KEYWORD:
-				name = "KEYWORD";
+				name = "KEYWORD"sv;
 				break;
 
 			case skyfauna::IdentifierType::SYMBOL:
-				name = "SYMBOL";
+				name = "SYMBOL"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid skyfauna::TokenType");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return std::copy(name.begin(), name.end(), ctx.out());
+		return fmt::format_to(ctx.out(), "{}", name);
 	}
 };
 
 template<>
-struct formatter<skyfauna::LiteralType> : formatter<std::string> {
-	auto format(skyfauna::LiteralType ls, format_context& ctx) const -> decltype(ctx.out())
+struct fmt::formatter<skyfauna::LiteralType> : fmt::formatter<std::string> {
+	auto format(const skyfauna::LiteralType& ls, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (ls) {
 			case skyfauna::LiteralType::INVALID:
-				name = "INVALID";
+				name = "INVALID"sv;
 				break;
 
 			case skyfauna::LiteralType::INTEGER:
-				name = "INTEGER";
+				name = "INTEGERsv";
 				break;
 
 			case skyfauna::LiteralType::FLOATING_POINT:
-				name = "FLOATING_POINT";
+				name = "FLOATING_POINT"sv;
 				break;
 
 			case skyfauna::LiteralType::CHAR:
-				name = "CHAR";
+				name = "CHAR"sv;
 				break;
 
 			case skyfauna::LiteralType::STRING:
-				name = "STRING";
+				name = "STRING"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid skyfauna::TokenType");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return std::copy(name.begin(), name.end(), ctx.out());
 	}
 };
 
 template<>
-struct formatter<skyfauna::PuncType> : formatter<std::string> {
-	auto format(skyfauna::PuncType ls, format_context& ctx) const -> decltype(ctx.out())
+struct fmt::formatter<skyfauna::PuncType> : fmt::formatter<std::string> {
+	auto format(const skyfauna::PuncType& ls, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (ls) {
 			case skyfauna::PuncType::INVALID:
-				name = "INVALID";
+				name = "INVALID"sv;
 				break;
 
 			case skyfauna::PuncType::OPERATOR:
-				name = "OPERATOR";
+				name = "OPERATOR"sv;
 				break;
 
 			case skyfauna::PuncType::DELIMITER:
-				name = "DELIMITER";
+				name = "DELIMITER"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid skyfauna::TokenType");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return std::copy(name.begin(), name.end(), ctx.out());
 	}
 };
 
 template<>
-struct formatter<skyfauna::CommentType> : formatter<std::string> {
-	auto format(skyfauna::CommentType ls, format_context& ctx) const -> decltype(ctx.out())
+struct fmt::formatter<skyfauna::CommentType> : fmt::formatter<std::string> {
+	auto format(const skyfauna::CommentType& ls, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (ls) {
 			case skyfauna::CommentType::INVALID:
-				name = "INVALID";
+				name = "INVALID"sv;
 				break;
 
 			case skyfauna::CommentType::LINE:
-				name = "LINE_COMMENT";
+				name = "LINE_COMMENT"sv;
 				break;
 
 			case skyfauna::CommentType::BLOCK:
-				name = "BLOCK_COMMENT";
+				name = "BLOCK_COMMENT"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid skyfauna::TokenType");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return std::copy(name.begin(), name.end(), ctx.out());
 	}
 };
 
 template<>
-struct formatter<skyfauna::Token> : formatter<std::string> {
+struct fmt::formatter<skyfauna::Token> : fmt::formatter<std::string> {
 	auto format(const skyfauna::Token& tok, format_context& ctx) const -> decltype(ctx.out())
 	{
 		switch (tok.type) {
 			case skyfauna::TokenType::IDENTIFIER:
-				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {}",
 					 tok.type,
 					 skyfauna::ConvertSubtype<skyfauna::IdentifierType>(tok.subtype),
 					 tok.text);
 
-			case skyfauna::TokenType::PUNCTUATOR:
-				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
-					 tok.type,
-					 skyfauna::ConvertSubtype<skyfauna::PuncType>(tok.subtype),
-					 tok.text);
-
 			case skyfauna::TokenType::LITERAL:
-				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {}",
 					 tok.type,
 					 skyfauna::ConvertSubtype<skyfauna::LiteralType>(tok.subtype),
 					 tok.text);
 
+			case skyfauna::TokenType::PUNCTUATOR:
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {}",
+					 tok.type,
+					 skyfauna::ConvertSubtype<skyfauna::PuncType>(tok.subtype),
+					 tok.text);
+
+			case skyfauna::TokenType::PREPROCESSOR_DIRECTIVE:
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [TEXT]: {}",
+					 tok.type, tok.text);
+
 			case skyfauna::TokenType::COMMENT:
-				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {} ",
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [SUBTYPE]: {} [TEXT]: {}",
 					 tok.type,
 					 skyfauna::ConvertSubtype<skyfauna::CommentType>(tok.subtype),
 					 tok.text);
 
 			default:
-				return format_to(ctx.out(), "TOKEN: [TYPE]: {} [TEXT]: {} ",
+				return fmt::format_to(ctx.out(), "TOKEN: [TYPE]: {} [TEXT]: {}",
 					 tok.type, tok.text);
 		}
 	}
 };
-}
 
 namespace skyfauna {
 class Lexer {
@@ -297,6 +325,7 @@ private:
 		NUMERIC_LITERAL,
 		STRING_LITERAL,
 		CHAR_LITERAL,
+		PREPROCESSOR_DIRECTIVE,
 		PUNCTUATOR,
 		OPERATOR,
 		DELIMITER,

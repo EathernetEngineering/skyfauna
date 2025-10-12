@@ -54,68 +54,67 @@ static constexpr std::array g_Keywords = std::to_array<std::string_view>({
 static constexpr std::array g_KeywordHashes = skyfauna::HashStrings(g_Keywords);
 
 
-namespace fmt {
 template<>
-struct formatter<skyfauna::Lexer::State> : formatter<std::string> {
+struct fmt::formatter<skyfauna::Lexer::State> : fmt::formatter<std::string> {
 	auto format(skyfauna::Lexer::State t, format_context& ctx) const -> decltype(ctx.out())
 	{
-		const char *name;
+		using namespace std::literals;
+		std::string_view name;
 		switch (t) {
 			case skyfauna::Lexer::State::BAD:
-				name = "BAD";
+				name = "BAD"sv;
 				break;
 
 			case skyfauna::Lexer::State::NEW_TOKEN:
-				name = "NEW_TOKEN";
+				name = "NEW_TOKEN"sv;
 				break;
 
 			case skyfauna::Lexer::State::NUMERIC_LITERAL:
-				name = "NUMERIC_LITERAL";
+				name = "NUMERIC_LITERAL"sv;
 				break;
 
 			case skyfauna::Lexer::State::STRING_LITERAL:
-				name = "STRING_LITERAL";
+				name = "STRING_LITERAL"sv;
 				break;
 
 			case skyfauna::Lexer::State::CHAR_LITERAL:
-				name = "CHAR_LITERAL";
+				name = "CHAR_LITERAL"sv;
 				break;
 
 			case skyfauna::Lexer::State::OPERATOR:
-				name = "OPERATOR";
+				name = "OPERATOR"sv;
 				break;
 
 			case skyfauna::Lexer::State::DELIMITER:
-				name = "DELIMITER";
+				name = "DELIMITER"sv;
 				break;
 
 			case skyfauna::Lexer::State::IDENTIFIER:
-				name = "IDENTIFIER";
+				name = "IDENTIFIER"sv;
 				break;
 
 			case skyfauna::Lexer::State::LINE_COMMENT:
-				name = "LINE_COMMENT";
+				name = "LINE_COMMENT"sv;
 				break;
 
 			case skyfauna::Lexer::State::BLOCK_COMMENT:
-				name = "BLOCK_COMMENT";
+				name = "BLOCK_COMMENT"sv;
 				break;
 
 			case skyfauna::Lexer::State::COMPLETE_TOKEN:
-				name = "COMPLETE_TOKEN";
+				name = "COMPLETE_TOKEN"sv;
 				break;
 
 			case skyfauna::Lexer::State::EOF_TOKEN:
-				name = "EOF_TOKEN";
+				name = "EOF_TOKEN"sv;
 				break;
 
 			default:
 				throw std::runtime_error("fmt: invalid State");
 		}
-		return format_to(ctx.out(), "{}", name);
+		return std::copy(name.begin(), name.end(), ctx.out());
 	}
 };
-}
 
 namespace skyfauna {
 Lexer::Lexer(std::string&& code) noexcept
@@ -202,6 +201,11 @@ int Lexer::Transition(char c)
 				m_CToken.type = TokenType::LITERAL;
 				m_CToken.subtype = ConvertSubtype<TokenTypesBase>(LiteralType::STRING);
 				m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
+			// } else if (c == '#') {
+			// 	m_State = State::PREPROCESSOR_DIRECTIVE;
+			// 	m_CToken.type = TokenType::PREPROCESSOR_DIRECTIVE;
+			// 	m_CToken.subtype = 0;
+			// 	m_RecoveryFunc = [](char c){ return std::iscntrl(c); };
 			} else if (std::ispunct(c)) {
 				m_State = State::PUNCTUATOR;
 				m_CToken.type = TokenType::PUNCTUATOR;

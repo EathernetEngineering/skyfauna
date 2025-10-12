@@ -13,11 +13,11 @@
 namespace skyfauna {
 void Compiler::AddFile(std::filesystem::path path) {
 	if (!std::filesystem::exists(path)) {
-		throw std::runtime_error(std::format("File {} does not exist",
+		throw std::runtime_error(fmt::format("File {} does not exist",
 									   path.filename().string()));
 	}
 	if (!std::filesystem::is_regular_file(path)) {
-		throw std::runtime_error(std::format("File {} is not a valid file",
+		throw std::runtime_error(fmt::format("File {} is not a valid file",
 									   path.filename().string()));
 	}
 
