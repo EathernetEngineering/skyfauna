@@ -134,9 +134,9 @@ constexpr const T& CastTokenType(const U& other) {
 class Token {
 public:
 	Token()
-	 : m_Type(0), m_Text(std::move([](){
+	 : m_Type(0), m_Text([](){
 			std::string s; s.reserve(16); return s;
-		}()))
+		}())
 	{}
 
 	template<typename T>
@@ -436,9 +436,9 @@ public:
 
 	inline void Reset() noexcept { *this = Lexer(); }
 	inline void Reset(std::string&& code) noexcept {
-		*this = std::move(Lexer(std::move(code)));
+		*this = Lexer(std::move(code));
 	}
-	inline void SetCode(std::string&& code) noexcept { Reset(); }
+	inline void SetCode(std::string&& code) noexcept { m_Code = std::move(code); }
 
 	inline std::vector<Token> GetTokensAndReset() noexcept {
 		auto tmp(std::move(m_Tokens));
