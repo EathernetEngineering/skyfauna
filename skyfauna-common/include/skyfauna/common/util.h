@@ -117,7 +117,17 @@ constexpr std::size_t Hash<const char *>(const char *str)
 template<>
 constexpr std::size_t Hash<std::string_view>(std::string_view view)
 {
-	return Hash(view.data());
+	std::size_t h = 1469598103934665603ull;
+	for (auto& c : view) {
+		h = (h ^ c) * 1099511628211ull;
+	}
+	return h;
+}
+
+template<>
+constexpr std::size_t Hash<const std::string&>(const std::string& str)
+{
+	return Hash(std::string_view(str));
 }
 
 template<typename T, size_t N>

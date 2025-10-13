@@ -32,6 +32,7 @@ target_sources(skyfauna-common PUBLIC
 			"${CMAKE_CURRENT_BINARY_DIR}/include"
 		FILES
 			"${CMAKE_CURRENT_BINARY_DIR}/include/skyfauna/common/config.h"
+			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/common/commandLine.h"
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/common/log.h"
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/common/util.h"
 )

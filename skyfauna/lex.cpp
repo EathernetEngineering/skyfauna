@@ -11,8 +11,6 @@
 #include <string>
 #include <string_view>
 #include <cctype>
-#include <fcntl.h>
-#include <unistd.h>
 
 // ***********************************************
 // ********** Types looked for by lexer **********

@@ -28,34 +28,36 @@ if (SKYFAUNA_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-install(TARGETS skyfauna-common skyfauna skyfauna-cli
-	EXPORT skyfaunaTargets
-	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	FILE_SET public_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+if (UNIX AND NOT APPLE)
+	install(TARGETS skyfauna-common skyfauna skyfauna-cli
+		EXPORT skyfaunaTargets
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+		FILE_SET public_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	)
 
-write_basic_package_version_file(
-	"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfigVersion.cmake"
-	VERSION ${PROJECT_VERSION}
-	COMPATIBILITY SameMajorVersion
-)
+	write_basic_package_version_file(
+		"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfigVersion.cmake"
+		VERSION ${PROJECT_VERSION}
+		COMPATIBILITY SameMajorVersion
+	)
 
-configure_package_config_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/skyfaunaConfig.cmake.in"
-	"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfig.cmake"
-	INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/skyfauna"
-)
+	configure_package_config_file(
+		"${CMAKE_CURRENT_SOURCE_DIR}/cmake/skyfaunaConfig.cmake.in"
+		"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfig.cmake"
+		INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/skyfauna"
+	)
 
-install(FILES
-	"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfig.cmake"
-	"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfigVersion.cmake"
-	DESTINATION "${CMAKE_INSTALL_LIB}/cmake/skyfauna"
-)
+	install(FILES
+		"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfig.cmake"
+		"${CMAKE_CURRENT_BINARY_DIR}/skyfaunaConfigVersion.cmake"
+		DESTINATION "${CMAKE_INSTALL_LIB}/cmake/skyfauna"
+	)
 
-export(EXPORT skyfaunaTargets
-	NAMESPACE skyfauna::
-	FILE "${CMAKE_CURRENT_BINARY_DIR}/skyfaunaTargets.cmake"
-)
+	export(EXPORT skyfaunaTargets
+		NAMESPACE skyfauna::
+		FILE "${CMAKE_CURRENT_BINARY_DIR}/skyfaunaTargets.cmake"
+	)
+endif(UNIX AND NOT APPLE)
 
