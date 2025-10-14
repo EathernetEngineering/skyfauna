@@ -41,7 +41,6 @@ target_sources(skyfauna PUBLIC
 		FILES
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/compiler.h"
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/lex.h"
-			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/solver.h"
 )
 add_library(skyfauna::skyfauna ALIAS skyfauna)
 

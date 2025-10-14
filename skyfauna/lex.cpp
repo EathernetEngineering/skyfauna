@@ -13,46 +13,8 @@
 #include <cctype>
 
 // ***********************************************
-// ********** Types looked for by lexer **********
-// ***************** Lexer state *****************
+// ********** Formatter specializations **********
 // ***********************************************
-
-static constexpr std::array g_Operators = std::to_array<std::string_view>({
-	"+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>", "++", "--",
-	"!", "&&", "||", "==", "!=", "<", "<=", ">", ">=",
-	"=", "+=", "-=" , "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="
-});
-
-static constexpr size_t g_LongestOperator =
-	skyfauna::LongestStrlen(g_Operators);
-
-static constexpr std::array g_Delimiters = std::to_array<std::string_view>({
-	"(", ")", "[", "]", "{", "}", ",", ".", ";", ":", ".", "?", "->",
-	"#", "...",
-	"//", "/*"
-});
-static constexpr size_t g_LongestDelimiter =
-	skyfauna::LongestStrlen(g_Delimiters);
-
-static constexpr std::array g_Keywords = std::to_array<std::string_view>({
-	"int",
-	"float",
-	"char",
-	"string",
-	"void",
-	"ptr",
-	"return",
-	"static",
-	"class",
-	"public",
-	"private",
-	"protected",
-	"null",
-});
-
-static constexpr std::array g_KeywordHashes = skyfauna::HashStrings(g_Keywords);
-
-
 template<>
 struct fmt::formatter<skyfauna::Lexer::State> : fmt::formatter<std::string> {
 	auto format(skyfauna::Lexer::State t, format_context& ctx) const -> decltype(ctx.out())
@@ -116,6 +78,29 @@ struct fmt::formatter<skyfauna::Lexer::State> : fmt::formatter<std::string> {
 };
 
 namespace skyfauna {
+// ***********************************************
+// ************* Keywords and hashes *************
+// ***********************************************
+static constexpr std::array g_Keywords = std::to_array<std::string_view>({
+	"int",
+	"float",
+	"char",
+	"string",
+	"void",
+	"ptr",
+	"return",
+	"static",
+	"class",
+	"public",
+	"private",
+	"protected",
+	"null",
+});
+static constexpr std::array g_KeywordHashes = skyfauna::HashStrings(g_Keywords);
+
+// ***********************************************
+// ************ Lexer implementation *************
+// ***********************************************
 Lexer::Lexer(std::string&& code) noexcept
  : m_Code(std::move(code))
 {
@@ -132,15 +117,14 @@ std::vector<Token>& Lexer::Tokenize()
 	m_State = State::NEW_TOKEN;
 	m_CToken = Token();
 
-	int a = 0;
-	m_CodeIt = m_Code.cbegin();
-	for (; m_CodeIt != m_Code.cend();) {
+	int IncDistance = 0;
+	using std::ranges::next;
+	for (m_CodeIt = m_Code.cbegin();
+		m_CodeIt != m_Code.cend();
+		m_CodeIt = next(m_CodeIt, IncDistance, m_Code.cend()))
+	{
 		auto c = *m_CodeIt;
-		a = Transition(c);
-		
-		// This is not in the for to conditionally avoid incrementing in
-		// steps that don't consume characters, using `continue`
-		std::advance(m_CodeIt, a);
+		IncDistance = Transition(c);
 	}
 	while (m_State != State::BAD && m_State != State::NEW_TOKEN)
 		if (Transition('\0') != 0)
@@ -298,7 +282,7 @@ int Lexer::Transition(char c)
 				case '[': // fall through
 				case ']': // fall through
 				case '{': // fall through
-				case '}':
+				case '}': // fall through
 				case ',':
 					m_CToken.type() = CastTokenType<TokenType>(TTPunctuator::DELIMITER);
 					m_CToken.text().push_back(c);
@@ -384,7 +368,7 @@ int Lexer::Transition(char c)
 					}
 					return adv;
 
-				case '<':
+				case '<': // fall through
 				case '>':
 					adv = 1;
 					m_CToken.type() = CastTokenType<TokenType>(TTPunctuator::OPERATOR);
