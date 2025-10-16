@@ -12,7 +12,12 @@ public:
 	static void Init();
 	static void Shutdown() noexcept;
 
-	static inline auto GetLogger() { return s_Logger; }
+	static auto GetLogger() { return s_Logger; }
+
+	static void SetLogLevel(spdlog::level::level_enum level) {
+		s_Logger->set_level(level);
+		s_Logger->flush_on(level);
+	}
 
 private:
 	static std::shared_ptr<spdlog::logger> s_Logger;

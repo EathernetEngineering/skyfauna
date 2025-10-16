@@ -6,8 +6,9 @@ cmake_minimum_required(VERSION 4.0)
 option(SKYFAUNA_BUILD_SHARED "Build tests" OFF)
 
 set(SKYFAUNA_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/lex.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/compiler.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/lex.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/preproc.cpp
 )
 
 if (SKYFAUNA_BUILD_SHARED)
@@ -41,6 +42,7 @@ target_sources(skyfauna PUBLIC
 		FILES
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/compiler.h"
 			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/lex.h"
+			"${CMAKE_CURRENT_SOURCE_DIR}/include/skyfauna/preproc.h"
 )
 add_library(skyfauna::skyfauna ALIAS skyfauna)
 

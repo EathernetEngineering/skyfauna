@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <span>
 #include <string>
 #include <string_view>
@@ -79,9 +80,26 @@ constexpr std::size_t Strlen(const char *str)
 	return l;
 }
 
-inline constexpr std::size_t Strlen(std::string_view str)
+constexpr std::size_t Strlen(const std::string_view str)
 {
 	return str.size();
+}
+
+constexpr std::size_t Strlen(const std::string& str)
+{
+	return str.size();
+}
+
+constexpr std::size_t Strcmp(const char *lhs, const char *rhs)
+{
+	while (*lhs != '\0' && *lhs == *rhs) lhs++, rhs++;
+	return lhs - rhs;
+}
+
+constexpr std::size_t Strcmp(const char *lhs, const char *rhs, std::size_t n)
+{
+	while (*lhs != '\0' && *lhs == *rhs && n > 0) ++lhs, ++rhs, --n;
+	return lhs - rhs;
 }
 
 template<typename T, std::size_t N>
@@ -100,53 +118,113 @@ constexpr std::size_t LongestStrlen(const std::array<T, N>& arr)
 	return LongestStrlen(s);
 }
 
-template<typename Key>
-constexpr std::size_t Hash(Key) = delete;
-
-template<>
-constexpr std::size_t Hash<const char *>(const char *str)
-{
-	std::size_t h = 1469598103934665603ull, i = 0;
-	while (str[i] != '\0') {
-		h = (h ^ str[i]) * 1099511628211ull;
-		++i;
-	}
-	return h;
-}
-
-template<>
-constexpr std::size_t Hash<std::string_view>(std::string_view view)
+template<typename InputIt, typename End>
+requires std::input_iterator<InputIt> &&
+	std::sentinel_for<End, InputIt>
+constexpr std::size_t HashStr(InputIt it, End end)
 {
 	std::size_t h = 1469598103934665603ull;
-	for (auto& c : view) {
-		h = (h ^ c) * 1099511628211ull;
-	}
+	for (; it != end; ++it)
+		h = (h ^ *it) * 1099511628211ull;
 	return h;
 }
 
-template<>
-constexpr std::size_t Hash<const std::string&>(const std::string& str)
+template<typename Key>
+struct Hash
 {
-	return Hash(std::string_view(str));
+	std::size_t operator()(Key) = delete;
+};
+
+template<>
+struct Hash<std::string_view>
+{
+	constexpr std::size_t operator()(const std::string_view view) {
+		return HashStr(view.begin(), view.end());
+	}
+};
+
+template<>
+struct Hash<const char *>
+{
+	constexpr std::size_t operator()(const char *str) {
+		return HashStr(str, str + Strlen(str));
+	}
+};
+
+template<>
+struct Hash<std::string>
+{
+	constexpr std::size_t operator()(const std::string& str) {
+		return HashStr(str.begin(), str.end());
+	}
+};
+
+template<typename T, typename = void>
+struct IsHashable : std::false_type {};
+
+template<typename T>
+struct IsHashable<T, std::void_t<decltype(std::declval<Hash<
+	std::remove_cvref_t<T>>>()(
+		std::declval<const std::remove_reference_t<T>&>()))>>
+ : std::true_type {};
+
+template<typename T>
+inline constexpr bool IsHashableV = IsHashable<T>::value;
+
+template<typename InputIt, typename OutputIt>
+requires std::input_iterator<InputIt> &&
+	std::output_iterator<OutputIt, std::size_t>
+constexpr void HashStringsArr(InputIt begin, InputIt end, OutputIt out)
+{
+	std::transform(begin, end, out,
+				[](const std::iter_reference_t<InputIt> old) ->
+					std::size_t { return Hash<std::decay_t<decltype(old)>>{}(old); });
 }
 
 template<typename T, size_t N>
 requires (N != std::dynamic_extent)
-constexpr std::array<std::size_t, N> HashStrings(std::span<T, N> inArr)
+constexpr std::array<std::size_t, N> HashStringsArr(std::span<const T, N> in)
 {
-	std::array<std::size_t, N> outArr;
-	static_assert(outArr.size() == inArr.size());
-	std::transform(inArr.begin(), inArr.end(), outArr.begin(),
-				[](const T old) -> std::size_t { return Hash(old); });
-	return outArr;
+	std::array<std::size_t, N> out;
+	HashStringsArr(in.begin(), in.end(), out.begin());
+	return out;
 }
 
 template<typename T, size_t N>
-inline constexpr std::array<std::size_t, N> HashStrings(const std::array<T, N>& inArr)
+constexpr std::array<std::size_t, N> HashStringsArr(const std::array<T, N>& in)
 {
-	std::span<const T, N> s(inArr);
-	return HashStrings(s);
+	std::array<std::size_t, N> out;
+	HashStringsArr(in.begin(), in.end(), out.begin());
+	return out;
 }
+
+
+template<typename InputIt>
+requires std::input_iterator<InputIt>
+std::vector<std::size_t> HashStrings(InputIt begin, InputIt end) {
+	std::vector<std::size_t> outArr;
+	outArr.resize(std::ranges::distance(begin, end));
+	std::transform(begin, end, outArr.begin(),
+				[](const std::iter_reference_t<InputIt> str) ->
+					std::size_t { return Hash<std::decay_t<decltype(str)>>{}(str); });
+	return outArr;
+}
+
+template<typename T, std::size_t N = std::dynamic_extent>
+std::vector<std::size_t> HashStrings(std::span<const T, N> span) {
+	return HashStrings(span.begin(), span.end());
+}
+
+template<typename T, std::size_t N>
+std::vector<std::size_t> HashStrings(const std::array<T, N>& arr) {
+	return HashStrings(arr.begin(), arr.end());
+}
+
+template<typename T>
+std::vector<std::size_t> HashStrings(const std::vector<T>& vec) {
+	return HashStrings(vec.begin(), vec.end());
+}
+
 }
 
 #endif

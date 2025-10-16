@@ -39,7 +39,7 @@ struct CmdLineOption {
 
 	CmdLineOption() = default;
 	CmdLineOption(std::string_view n, char s, CmdLineArgRequired r, Id i)
-	 : longName(n), shortName(s), req(r), identifier(i), hash(Hash(longName))
+	 : longName(n), shortName(s), req(r), identifier(i), hash(Hash<std::string_view>{}(longName))
 	{}
 private:
 	std::size_t hash;
@@ -205,7 +205,7 @@ private:
 			param = arg.substr(eqPos + 1);
 			argName = arg.substr(2, eqPos - 2);
 		}
-		std::size_t thisArgHash = Hash(argName);
+		std::size_t thisArgHash = Hash<std::string_view>{}(argName);
 		auto it = std::find_if(m_Opts.begin(), m_Opts.end(),
 							 [thisArgHash](const CmdLineOption<enum_type>& opt) -> bool {
 								return opt.hash == thisArgHash;

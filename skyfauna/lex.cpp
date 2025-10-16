@@ -6,7 +6,6 @@
 #include <skyfauna/common/util.h>
 
 #include <algorithm>
-#include <array>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -79,34 +78,9 @@ struct fmt::formatter<skyfauna::Lexer::State> : fmt::formatter<std::string> {
 
 namespace skyfauna {
 // ***********************************************
-// ************* Keywords and hashes *************
-// ***********************************************
-static constexpr std::array g_Keywords = std::to_array<std::string_view>({
-	"int",
-	"float",
-	"char",
-	"string",
-	"void",
-	"ptr",
-	"return",
-	"static",
-	"class",
-	"public",
-	"private",
-	"protected",
-	"null",
-});
-static constexpr std::array g_KeywordHashes = skyfauna::HashStrings(g_Keywords);
-
-// ***********************************************
 // ************ Lexer implementation *************
 // ***********************************************
-Lexer::Lexer(std::string&& code) noexcept
- : m_Code(std::move(code))
-{
-}
-
-std::vector<Token>& Lexer::Tokenize()
+Lexer& Lexer::Tokenize()
 {
 	if (m_Tokens.size() != 0) {
 		SF_WARN("Lexer::Tokenize() called with full buffer");
@@ -134,10 +108,17 @@ std::vector<Token>& Lexer::Tokenize()
 		m_CToken.type() &= AnySpecificTokenTypeMask();
 		m_Tokens.emplace_back(std::move(m_CToken));
 	}
-	m_Tokens.emplace_back(TTPunctuator::DELIMITER, "EOF");
 
 	m_Tokens.shrink_to_fit();
-	return m_Tokens;
+	return *this;
+}
+Lexer& Lexer::Reset() noexcept
+{
+	m_Keywords.clear();
+	m_Code.clear();
+	m_Tokens.clear();
+	m_State = State::NEW_TOKEN;
+	return *this;
 }
 
 int Lexer::Transition(char c)
@@ -256,18 +237,19 @@ int Lexer::Transition(char c)
 		case State::PUNCTUATOR: {
 			char cn = 0, cn2 = 0;
 			int adv = 0;
-			try {
-				cn = Peek(1);
-				cn2 = Peek(2);
-			} catch(const std::range_error& e) {
-				SF_TRACE("Lexer::Tokenize() look-ahead failed {}", e.what());
-			}
+			cn = TryPeek(1);
+			cn2 = TryPeek(2);
 			switch (c) {
 				case '!':
+					adv = 1;
 					m_CToken.type() = CastTokenType<TokenType>(TTPunctuator::OPERATOR);
 					m_CToken.text().push_back(c);
+					if (cn == '=') {
+						++adv;
+						m_CToken.text().push_back(cn);
+					}
 					m_State = State::COMPLETE_TOKEN;
-					return 1;
+					return adv;
 
 				case '#':
 					m_CToken.type() = CastTokenType<TokenType>(TokenCategory::PREPROCESSOR_DIRECTIVE);
@@ -382,7 +364,7 @@ int Lexer::Transition(char c)
 						m_CToken.text().push_back(cn);
 						if (cn2 == '=') {
 							++adv;
-							m_CToken.text().push_back(cn);
+							m_CToken.text().push_back(cn2);
 						}
 					}
 					return adv;
@@ -394,7 +376,7 @@ int Lexer::Transition(char c)
 					m_State = State::COMPLETE_TOKEN;
 					if (cn == c && cn2 == c) {
 						adv += 2;
-						m_CToken.text().append(c, 2);
+						m_CToken.text().append(2, c);
 					}
 					return adv;
 
@@ -409,11 +391,9 @@ int Lexer::Transition(char c)
 
 		case State::IDENTIFIER:
 			if (!std::isalnum(c) && c != '_') {
-				std::string_view text(m_CToken.text());
-				auto it = std::find(g_KeywordHashes.begin(),
-						   g_KeywordHashes.end(),
-						   Hash(text));
-				if (it == g_KeywordHashes.end()) {
+				m_CToken.value().emplace<std::size_t>(Hash<std::string>{}(m_CToken.text()));
+				auto it = m_Keywords.Find(any_cast<std::size_t>(m_CToken.value()));
+				if (it == m_Keywords.end()) {
 					m_CToken.type() = CastTokenType<TokenType>(TTIdentifier::SYMBOL);
 				} else {
 					m_CToken.type() = CastTokenType<TokenType>(TTIdentifier::KEYWORD);
@@ -453,6 +433,19 @@ int Lexer::Transition(char c)
 	}
 	throw std::logic_error(fmt::format("invalid transition from {} with '{}'",
 						   m_State, c));
+}
+char Lexer::TryPeek(int distance) noexcept {
+	auto pos = std::ranges::next(m_CodeIt, distance, m_Code.cend());
+	return pos == m_Code.cend() ? 0 : *pos;
+}
+char Lexer::Peek(int distance) {
+	char c = TryPeek(distance);
+	if (c)
+		return c;
+	throw std::range_error(fmt::format("Lexer::Peek: it + distance "
+								 "(which is {}) >= m_Code.size() (which is {})",
+								 std::distance(m_Code.cbegin(), m_CodeIt + distance),
+								 m_Code.size()));
 }
 }
 

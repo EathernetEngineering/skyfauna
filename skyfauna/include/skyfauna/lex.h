@@ -4,14 +4,12 @@
 #ifndef SKYFAUNA_LEX_H_
 #define SKYFAUNA_LEX_H_
 
+#include <skyfauna/common/set.h>
 #include <skyfauna/common/util.h>
 
 #include <any>
-#include <concepts>
 #include <functional>
-#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 #include <cstdint>
 
@@ -101,10 +99,14 @@ consteval bool TokenTypesCompatible() {
 template<typename T, typename U>
 requires IsTokenType<T> && IsTokenType<U>
 constexpr bool TokenTypesCompatible(T lhs, U rhs) {
-	if (!(lhs & AnyTokenCategoryMask()))
+	if (lhs & AnyTokenCategoryMask())
 		lhs &= AnyTokenCategoryMask();
-	if (!(rhs & AnyTokenCategoryMask()))
+	else
+		lhs = AnyTokenCategoryMask();
+	if (rhs & AnyTokenCategoryMask())
 		rhs &= AnyTokenCategoryMask();
+	else
+		rhs = AnyTokenCategoryMask();;
 	return static_cast<TokenType>(lhs) & static_cast<TokenType>(rhs);
 }
 
@@ -116,11 +118,22 @@ constexpr bool TokenTypesCompatible(U rhs) {
 		lhs = TokenCategoryMask<T>();
 	else
 		lhs = AnyTokenCategoryMask();;
-	if (!(rhsBase & AnyTokenCategoryMask()))
+	if (rhsBase & AnyTokenCategoryMask())
 		rhsBase &= AnyTokenCategoryMask();
-	return lhs & rhsBase;
+	else
+		rhsBase = AnyTokenCategoryMask();;
+	return lhs & rhsBase;;
 }
 
+template<typename T, typename U>
+requires IsTokenType<T> && IsTokenType<U>
+constexpr T& CastTokenType(U& other) {
+	if (!TokenTypesCompatible<T>(other))
+		throw std::logic_error(fmt::format(
+									 "Invalid cast from type '{}' to type '{}'",
+									 typeid(U).name(), typeid(T).name()));
+	return *reinterpret_cast<T*>(&other);
+}
 template<typename T, typename U>
 requires IsTokenType<T> && IsTokenType<U>
 constexpr const T& CastTokenType(const U& other) {
@@ -131,6 +144,16 @@ constexpr const T& CastTokenType(const U& other) {
 	return *reinterpret_cast<const T*>(&other);
 }
 
+template<typename Lhs, typename Rhs>
+requires IsTokenType<Lhs> && IsTokenType<Rhs>
+constexpr bool operator==(Lhs lhs, Rhs rhs) {
+	try {
+		return CastTokenType<TokenType>(lhs) == CastTokenType<TokenType>(rhs);
+	} catch (const std::logic_error& e) {
+		return false;
+	}
+}
+
 class Token {
 public:
 	Token()
@@ -139,16 +162,20 @@ public:
 		}())
 	{}
 
-	template<typename T>
-	requires IsTokenType<T>
-	Token(T type, std::string text)
-	 : m_Type(static_cast<TokenType>(type)), m_Text(std::move(text))
+	template<typename T, typename S>
+	requires IsTokenType<T> &&
+		std::constructible_from<std::string, S&&>
+	Token(T type, S&& text)
+		noexcept(std::is_nothrow_constructible_v<std::string, S&&>)
+	 : m_Type(static_cast<TokenType>(type)), m_Text(std::forward<S>(text))
 	{}
 
-	template<typename T, typename V>
-	requires IsTokenType<T>
-	Token(T type, std::string text, V value)
-	 : m_Type(static_cast<TokenType>(type)), m_Text(std::move(text)),
+	template<typename T, typename S, typename V>
+	requires IsTokenType<T> &&
+		std::constructible_from<std::string, S&&>
+	Token(T type, S&& text, V value)
+		noexcept(std::is_nothrow_constructible_v<std::string, S&&>)
+	 : m_Type(static_cast<TokenType>(type)), m_Text(std::forward<S>(text)),
 		m_Value(std::make_any<V>(value))
 	{}
 
@@ -159,14 +186,28 @@ public:
 
 	template<typename T = TokenType>
 	requires IsTokenType<T>
-	T& type() { return m_Type; }
+	T& type() { return CastTokenType<T>(m_Type); }
 	template<typename T = TokenType>
 	requires IsTokenType<T>
 	const T& type() const { return CastTokenType<T>(m_Type); }
+
 	std::string& text() { return m_Text; }
 	const std::string& text() const { return m_Text; }
-	std::any& value() { return m_Value; }
-	const std::any& value() const { return m_Value; }
+
+	template<typename V = std::any>
+	V& value() {
+		if constexpr (std::is_same_v<V, std::any>)
+			return m_Value;
+		else
+			return std::any_cast<V&>(m_Value);
+	}
+	template<typename V = std::any>
+	const V& value() const { 
+		if constexpr (std::is_same_v<V, std::any>)
+			return m_Value;
+		else
+			return std::any_cast<const V&>(m_Value);
+	}
 
 private:
 	TokenType m_Type;
@@ -422,42 +463,62 @@ public:
 	~Lexer() noexcept = default;
 	Lexer(Lexer&&) noexcept = default;
 	Lexer& operator=(Lexer&&) noexcept = default;
-	Lexer(std::string&& code) noexcept;
+	template<typename Set, typename Str>
+	requires std::constructible_from<common::HashSet<std::string_view>, Set&&> &&
+		std::constructible_from<std::string, Str&&>
+	Lexer(Set&& keywords, Str&& code)
+	 : m_Keywords(std::forward<Set>(keywords)),
+		m_Code(std::forward<Str>(code)) {}
 
-	std::vector<Token>& Tokenize();
+	template<typename T, std::size_t N, typename S>
+	requires std::constructible_from<std::string_view, T> &&
+		std::constructible_from<std::string, S&&>
+	Lexer(const std::array<T, N>& keywords, S&& code)
+	 : m_Keywords(std::vector(keywords.begin(), keywords.end())),
+		m_Code(std::forward<S>(code)) {}
 
-	inline std::vector<Token>& GetTokens() noexcept { return m_Tokens; }
-	inline const std::vector<Token>& GetTokens() const noexcept {
+	Lexer& Tokenize();
+
+	template<typename Set>
+	requires std::assignable_from<common::HashSet<std::string_view>&, Set&&>
+	void SetKeywords(Set&& keywords) {
+		m_Keywords = keywords;
+	}
+	common::HashSet<std::string_view>& GetKeywords() { return m_Keywords; }
+	const common::HashSet<std::string_view>& GetKeywords() const {
+		return m_Keywords;
+	}
+
+	template<typename Str>
+	requires std::assignable_from<std::string&, Str&&>
+	void SetCode(Str&& code)
+		noexcept(std::is_nothrow_assignable_v<std::string, Str&&>) {
+		m_Code = std::forward<Str>(code);
+	}
+
+	std::vector<Token>& GetTokens() noexcept { return m_Tokens; }
+	const std::vector<Token>& GetTokens() const noexcept {
 		return m_Tokens;
 	}
-	inline std::vector<Token> TakeTokens() noexcept {
-		return std::exchange(m_Tokens, {});
-	}
 
-	inline void Reset() noexcept { *this = Lexer(); }
-	inline void Reset(std::string&& code) noexcept {
-		*this = Lexer(std::move(code));
-	}
-	inline void SetCode(std::string&& code) noexcept { m_Code = std::move(code); }
-
-	inline std::vector<Token> GetTokensAndReset() noexcept {
-		auto tmp(std::move(m_Tokens));
+	Lexer& Reset() noexcept;
+	template<typename V, typename S>
+	requires std::assignable_from<std::vector<std::string_view>&, V&&> &&
+		std::assignable_from<std::string&, S&&>
+	Lexer& Reset(V&& keywords, S&& code) {
 		Reset();
-		return tmp;
+		m_Keywords = std::forward<V>(keywords);
+		m_Code = std::forward<S>(code);;
+		return *this;
 	}
 
 private:
 	int Transition(char c);
-	inline char Peek(int distance) {
-		auto pos = m_CodeIt + distance;
-		if (pos >= m_Code.cend())
-			throw std::range_error(fmt::format("Lexer::Peek: it + distance "
-									  "(which is {}) >= m_Code.size() (which is {})",
-									  std::distance(m_Code.cbegin(), pos), m_Code.size()));
-		return *pos;
-	}
+	char TryPeek(int distance) noexcept;
+	char Peek(int distance);
 
 private:
+	common::HashSet<std::string_view> m_Keywords;
 	std::string m_Code;
 	std::vector<Token> m_Tokens;
 	State m_State;
