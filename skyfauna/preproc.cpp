@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
+#include <iterator>
 #include <map>
 #include <skyfauna/preproc.h>
 #include <skyfauna/lex.h>
@@ -26,26 +27,34 @@ static constexpr std::array g_PreprocDirectives = std::to_array<std::string_view
 	"vlist"
 });
 
+template<typename InputIt, typename End>
+requires std::input_iterator<InputIt> && std::sentinel_for<End, InputIt> &&
+	std::same_as<std::iter_value_t<InputIt>, Token>
 static auto ReplaceObjectMacro(const Preprocessor::ObjectMacro& to,
-						 std::vector<Token>::iterator tokenIt,
+						 InputIt tokenIt, End last,
 						 std::vector<Token>& tokens) -> decltype(tokenIt)
 {
-	tokenIt = tokens.erase(tokenIt);
-	return tokens.insert(tokenIt, to.contents.begin(), to.contents.end());
+	tokens.insert(tokens.end(), to.contents.begin(), to.contents.end());
+	return std::ranges::next(tokenIt,
+						  std::ranges::distance(to.contents.begin(), to.contents.end()),
+						  last);
 }
 
+template<typename InputIt, typename End>
+requires std::input_iterator<InputIt> && std::sentinel_for<End, InputIt> &&
+	std::same_as<std::iter_value_t<InputIt>, Token>
 static auto ReplaceFunctionMacro(const Preprocessor::FunctionMacro& to,
-						 std::vector<Token>::iterator tokenIt,
+						 InputIt tokenIt, End last,
 						 std::vector<Token>& tokens) -> decltype(tokenIt)
 {
 	// Search the code tokens to find the bounds of the function call-like use
 	auto toReplaceBegin = tokenIt;
-	auto toReplaceEnd = std::ranges::next(tokenIt, 2, tokens.end());
+	auto toReplaceEnd = std::ranges::next(tokenIt, 2, last);
 	std::vector<Token> vargs;
 	int argIndex = 0;
 	std::map<std::size_t, std::vector<Token>> argsMap;
 	TokenType lastTokenType = CastTokenType<TokenType>(TTPunctuator::DELIMITER);
-	for (; toReplaceEnd != tokens.end(); ++toReplaceEnd) {
+	for (; toReplaceEnd != last; ++toReplaceEnd) {
 		if (toReplaceEnd->type() == TTPunctuator::DELIMITER &&
 			lastTokenType == TTIdentifier::SYMBOL)
 		{
@@ -117,8 +126,8 @@ static auto ReplaceFunctionMacro(const Preprocessor::FunctionMacro& to,
 		}
 	}
 	// Only erse and copy now that it's known the substition was successful
-	tokenIt = tokens.erase(toReplaceBegin, ++toReplaceEnd);
-	return ++tokens.insert(tokenIt, replacement.begin(), replacement.end());
+	tokens.insert(tokens.end(), replacement.begin(), replacement.end());
+	return toReplaceEnd;
 }
 
 static Preprocessor::ObjectMacro
@@ -320,6 +329,7 @@ Preprocessor& Preprocessor::Reset()
 Preprocessor& Preprocessor::Preprocess() {
 	using std::ranges::next;
 	int adv = 1;
+	m_Preprocessed.reserve(m_Code.size());
 	for (auto it = m_Code.begin();
 		it != m_Code.end();
 		it = next(it, adv, m_Code.end()))
@@ -347,21 +357,34 @@ Preprocessor& Preprocessor::Preprocess() {
 			}
 			m_Directives.emplace_back(std::move(d));
 		} else if (it->type() == TTIdentifier::SYMBOL) {
+			bool replaced = false;
 			for (const auto& directive : m_Directives) {
-				if (std::holds_alternative<ObjectMacro>(directive)) {
-					auto& macro = std::get<ObjectMacro>(directive);
-					if (macro.nameHash == it->value<std::size_t>()) {
-						it = ReplaceObjectMacro(macro, it, m_Code);
-						break;
+				try {
+					if (std::holds_alternative<ObjectMacro>(directive)) {
+						auto& macro = std::get<ObjectMacro>(directive);
+						if (macro.nameHash == it->value<std::size_t>()) {
+							it = ReplaceObjectMacro(macro, it, m_Code.end(), m_Preprocessed);
+							replaced = true;
+							break;
+						}
+					} else if (std::holds_alternative<FunctionMacro>(directive)) {
+						auto& macro = std::get<FunctionMacro>(directive);
+						if (macro.nameHash == it->value<std::size_t>()) {
+							it = ReplaceFunctionMacro(macro, it, m_Code.end(), m_Preprocessed);
+							replaced = true;
+							break;
+						}
 					}
-				} else if (std::holds_alternative<FunctionMacro>(directive)) {
-					auto& macro = std::get<FunctionMacro>(directive);
-					if (macro.nameHash == it->value<std::size_t>()) {
-						it = ReplaceFunctionMacro(macro, it, m_Code);
-						break;
-					}
+				} catch (const std::runtime_error& e) {
+					m_Diagnostics.push_back(fmt::format("Failed to replace macro {} ({})",
+												it->text(), e.what()));
 				}
 			}
+			if (!replaced) {
+				m_Preprocessed.push_back(*it);
+			}
+		} else {
+			m_Preprocessed.push_back(*it);
 		}
 	}
 	return *this;
@@ -421,7 +444,7 @@ Preprocessor::DirectiveVariant
 		}
 		d = CreateDirective(l.GetKeywords(), l.GetTokens());
 	} catch (const std::logic_error& e) {
-		m_Diagnostics.push_back(fmt::format("Invalid preprocessor directive {} ()",
+		m_Diagnostics.push_back(fmt::format("Invalid preprocessor directive {} ({})",
 									tokens.front().text(), e.what()));
 		return d;
 	}

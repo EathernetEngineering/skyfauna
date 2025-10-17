@@ -77,10 +77,10 @@ public:
 	}
 
 	std::vector<Token>& GetOutput() noexcept {
-		return m_Code;
+		return m_Preprocessed;
 	}
 	const std::vector<Token>& GetOutput() const noexcept {
-		return m_Code;
+		return m_Preprocessed;
 	}
 
 	Preprocessor& Reset();
@@ -108,6 +108,7 @@ private:
 
 private:
 	std::vector<Token> m_Code;
+	std::vector<Token> m_Preprocessed;
 
 	std::vector<DirectiveVariant> m_Directives;
 	std::vector<std::string> m_Diagnostics;
