@@ -36,8 +36,6 @@ private:
 
 private:
 	std::vector<std::filesystem::path> m_FilePaths;
-	std::string m_Code;
-	Lexer m_Lex;
 	std::vector<Token> m_Tokens;
 };
 }

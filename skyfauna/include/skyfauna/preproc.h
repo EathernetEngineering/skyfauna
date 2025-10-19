@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (C) 2025 Chloe Eather
 
-#include <skyfauna/lex.h>
+#include <skyfauna/token.h>
 
 #include <string>
 #include <string_view>

@@ -46,27 +46,26 @@ void Compiler::Compile() {
 		CompileFile(path);
 		SF_INFO("Compiled file: {}", path.string());
 	}
-	m_Lex.Reset();
 }
 
 void Compiler::CompileFile(const std::filesystem::path& path) {
-	std::string m_Code;
+	std::string codeStr;
 	std::ifstream file(path);
 	if (!file.is_open()) {
 		throw std::system_error(std::error_code(errno, std::system_category()));
 	}
 	auto size = file.seekg(0, file.end).tellg();
 	file.seekg(0, file.beg);
-	m_Code.resize(size);
-	file.read(m_Code.data(), size);
+	codeStr.resize(size);
+	file.read(codeStr.data(), size);
 	if (file.fail()) {
 		throw std::runtime_error(fmt::format("Failed to read file {}",
 									   path.filename().string()));
 	}
-	SF_DEBUG("Code to compile: \n{}\n", m_Code);
-	m_Lex.Reset(std::vector<std::string_view>(g_Keywords.begin(), g_Keywords.end()),
-			 std::move(m_Code));
-	m_Tokens = std::move(m_Lex.Tokenize().GetTokens());
+	SF_DEBUG("Code to compile: \n{}\n", codeStr);
+	Lexer lex(std::vector<std::string_view>(g_Keywords.begin(), g_Keywords.end()),
+			 std::move(codeStr));
+	m_Tokens = std::move(lex.Tokenize().GetTokens());
 	Preprocess();
 
 	for (auto& token : m_Tokens) {
