@@ -6,17 +6,19 @@
 namespace skyfauna::tests {
 const std::string_view g_PreprocessorValidCode = "#include <print>\n"
 	"#define macro 22\n"
-	"#define fmacro(...) print(vargs)()\n"
+	"#define fmacro(...) print(vargs, macro)()\n"
 	"#if 1\n"
 	"#elif 0\n"
 	"#endif\n"
-	//"fmacro(\"{}\", macro);\n";
-	"fmacro(\"{}\", 22);\n"; /* TODO: <- Remove this line */
+	"fmacro(\"{}\", macro);\n";
 
-const std::array<skyfauna::Token, 9> g_PreprocessorValidExpextedTokens = std::to_array({
+const std::array<skyfauna::Token, g_PreprocessorValidExpextedTokenCount>
+g_PreprocessorValidExpextedTokens = std::to_array({
 	skyfauna::Token(skyfauna::TTIdentifier::SYMBOL, "print"),
 	skyfauna::Token(skyfauna::TTPunctuator::DELIMITER, "("),
 	skyfauna::Token(skyfauna::TTLiteral::STRING, "\"{}\""),
+	skyfauna::Token(skyfauna::TTPunctuator::DELIMITER, ","),
+	skyfauna::Token(skyfauna::TTLiteral::INTEGER, "22"),
 	skyfauna::Token(skyfauna::TTPunctuator::DELIMITER, ","),
 	skyfauna::Token(skyfauna::TTLiteral::INTEGER, "22"),
 	skyfauna::Token(skyfauna::TTPunctuator::DELIMITER, ")"),

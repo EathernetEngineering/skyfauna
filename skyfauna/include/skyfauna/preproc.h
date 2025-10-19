@@ -28,12 +28,12 @@ public:
 		DirectiveType type = DirectiveType::INVALID;
 	};
 	struct ObjectMacro : Directive{
-		std::string_view name;
+		std::string name;
 		std::size_t nameHash;
 		std::vector<Token> contents;
 	};
 	struct FunctionMacro : Directive {
-		std::string_view name;
+		std::string name;
 		std::size_t nameHash;
 		std::vector<Token> params;
 		std::vector<Token> contents;
@@ -41,10 +41,10 @@ public:
 		bool vargs = false;
 	};
 	struct Include : Directive {
-		std::string_view file;
+		std::string file;
 	};
 	struct Message : Directive {
-		std::string_view contents;
+		std::string contents;
 	};
 	struct Check : Directive {
 		std::vector<std::string_view> contents, operators;
@@ -53,10 +53,10 @@ public:
 		std::variant<std::monostate, ObjectMacro, FunctionMacro,
 			Include, Message, Check>;
 
-	// Whether defining or using the macro it will have the same data. Use a
-	// different name to make it easier to tell in code whether the object being
-	// referred to is use case or the definiition.
-	using FunctionMacroUse = FunctionMacro;
+private:
+	using token_in_iterator = std::vector<Token>::const_iterator;
+	using token_out_iterator = std::vector<Token>::iterator;
+
 public:
 	Preprocessor() = default;
 	template<typename V>
@@ -99,12 +99,13 @@ public:
 	const std::vector<std::string>& GetDiagnotics() const { return m_Diagnostics; }
 
 private:
+	std::vector<Token> PreprocessRecurse(token_in_iterator first,
+									  token_in_iterator lastt);
+	std::vector<Token> PreprocessRecurse(const std::vector<Token>& line)
+	{
+		return PreprocessRecurse(line.begin(), line.end());
+	}
 	DirectiveVariant ParseDirective(const std::string_view line);
-	std::vector<Token> ExpandMacro(const ObjectMacro& macro);
-	std::vector<Token> ExpandMacro(const FunctionMacro& macro, const FunctionMacroUse& code);
-	template<typename InputIt>
-	requires std::input_iterator<InputIt>
-	std::vector<Token> ExpandMacro(const FunctionMacro& macro, InputIt pos);
 
 private:
 	std::vector<Token> m_Code;

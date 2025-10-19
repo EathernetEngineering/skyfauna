@@ -23,7 +23,7 @@ testing::AssertionResult CompareTokens(InputIt1 lhsFirst, InputIt1 lhsLast,
 {
 	auto lhsIt = lhsFirst;
 	auto rhsIt = rhsFirst;
-	bool eq = true, sizeEq;
+	bool eq = true, sizeEq = true;
 	if (std::distance(lhsIt, lhsLast) != std::distance(rhsIt, rhsLast))
 		eq = false, sizeEq = false;
 	std::vector<std::string> errors;
@@ -49,7 +49,7 @@ testing::AssertionResult CompareTokens(InputIt1 lhsFirst, InputIt1 lhsLast,
 			eq = false;
 			lhsType &= AnySpecificTokenTypeMask();
 			rhsType &= AnySpecificTokenTypeMask();
-			errors.push_back(fmt::format("Token \"{}\" type not eq to token {}"
+			errors.push_back(fmt::format("Token \"{}\" type not eq to token \"{}\""
 								" ({}:{:08b} vs {}:{:08b})",
 								lhsIt->text(), rhsIt->text(),
 								lhsCategory, lhsType,

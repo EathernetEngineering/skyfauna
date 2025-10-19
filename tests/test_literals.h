@@ -23,7 +23,7 @@ std::array<skyfauna::Token, g_LexerExpextedTokenCount> g_LexerExpectedTokens;
 
 extern const std::string_view g_PreprocessorValidCode;
 
-inline constexpr std::size_t g_PreprocessorValidExpextedTokenCount = 9;
+inline constexpr std::size_t g_PreprocessorValidExpextedTokenCount = 11;
 
 extern const
 std::array<skyfauna::Token, g_PreprocessorValidExpextedTokenCount>
