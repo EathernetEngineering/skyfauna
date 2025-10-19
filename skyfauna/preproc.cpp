@@ -16,7 +16,7 @@
 namespace skyfauna {
 static constexpr std::array g_PreprocDirectives = std::to_array<std::string_view>({
 	"define",
-	"if"
+	"if",
 	"elif",
 	"else",
 	"endif",
@@ -50,6 +50,8 @@ static auto ReplaceFunctionMacro(const Preprocessor::FunctionMacro& to,
 	// Search the code tokens to find the bounds of the function call-like use
 	auto toReplaceBegin = tokenIt;
 	auto toReplaceEnd = std::ranges::next(tokenIt, 2, last);
+	char pairedDelimiterCount = 0;
+	char lastPairedDelimiter;
 	std::vector<Token> vargs;
 	int argIndex = 0;
 	std::map<std::size_t, std::vector<Token>> argsMap;
@@ -58,15 +60,40 @@ static auto ReplaceFunctionMacro(const Preprocessor::FunctionMacro& to,
 		if (toReplaceEnd->type() == TTPunctuator::DELIMITER &&
 			lastTokenType == TTIdentifier::SYMBOL)
 		{
-			if (toReplaceEnd->text().compare(",") == 0) {
+			auto pairedDelimiterIdx = toReplaceEnd->text().npos;
+			const std::string& tokenText = toReplaceEnd->text();
+			if (tokenText.compare(",") == 0) {
 				++argIndex;
+				if (argIndex > to.paramCount) { 
+					vargs.push_back(*toReplaceEnd);
+				}
 				continue;
-			} else if (toReplaceEnd->text().compare(")") == 0) {
+			} else if (pairedDelimiterCount < 0) {
+				throw std::runtime_error("");
+			} else if (tokenText.compare(")") == 0 &&
+				pairedDelimiterCount == 0)
+			{
 				break;
+			} else if ((pairedDelimiterIdx = tokenText.find_first_of("[{(<"))
+				!= tokenText.npos)
+			{
+				lastPairedDelimiter = tokenText.at(pairedDelimiterIdx);
+			} else if ((pairedDelimiterIdx = tokenText.find_first_of("]})>"))
+				!= tokenText.npos)
+			{
+				char expectedDelim = tokenText.at(pairedDelimiterIdx);
+				if (lastPairedDelimiter != GetMatchingPairedDelimiter(
+					expectedDelim))
+				{
+					std::string errmsg = fmt::format(
+						"Unexpected delimiter \"{}\", expected \"{}\"",
+						expectedDelim, GetMatchingPairedDelimiter(expectedDelim));
+					throw std::runtime_error(errmsg);
+				}
 			} else {
 				std::string errmsg = fmt::format(
-					"Unexpected token {}, expected ')'",
-					toReplaceEnd->text());
+					"Unexpected token \"{}\", expected \")\"",
+					tokenText);
 				throw std::runtime_error(errmsg);
 			}
 			lastTokenType = CastTokenType<TokenType>(TTPunctuator::DELIMITER);
@@ -83,13 +110,13 @@ static auto ReplaceFunctionMacro(const Preprocessor::FunctionMacro& to,
 	// are a valid combination
 	if (vargs.size() > 0 && to.vargs == false) {
 		std::string errmsg = fmt::format(
-			"{} expects {} arguments, {} provided",
+			"Non-variadic macro \"{}\" expects {} arguments, {} provided",
 			toReplaceBegin->text(), to.paramCount, argIndex);
 		throw std::runtime_error(errmsg);
 	}
 	if (static_cast<int>(argsMap.size()) != to.paramCount) {
 		std::string errmsg = fmt::format(
-			"{} expects {} arguments, {} provided",
+			"\"{}\" expects {} arguments, {} provided",
 			toReplaceBegin->text(), to.paramCount, argIndex);
 		throw std::runtime_error(errmsg);
 	}
@@ -140,7 +167,7 @@ static Preprocessor::ObjectMacro
 	it = std::ranges::next(it, 1, tokens.end());
 	if (it == tokens.end()) {
 		std::string errmsg = fmt::format(
-			"Expected identifier after {}",
+			"Expected identifier after \"{}\"",
 			tokens.front().text());
 		throw std::runtime_error(errmsg);
 	}
@@ -164,7 +191,7 @@ static Preprocessor::FunctionMacro
 	it = std::ranges::next(it, 1, tokens.end());
 	if (it == tokens.end()) {
 		std::string errmsg = fmt::format(
-			"Expected identifier after {}",
+			"Expected identifier after \"{}\"",
 			tokens.front().text());
 		throw std::runtime_error(errmsg);
 	}
@@ -187,23 +214,25 @@ static Preprocessor::FunctionMacro
 			d.params.push_back(*it);
 		} else if (lastTokenType == TTIdentifier::SYMBOL &&
 			it->type() == TTPunctuator::DELIMITER) {
-			if (it->text().compare(",")) {
+			if (it->text().compare(",") != 0) {
 				std::string errmsg = fmt::format(
-					"Unexpected identifier {}",
+					"Unexpected identifier \"{}\"",
 					it->text());
 			}
 			// Do nothing
 		} else if (lastTokenType == TTPunctuator::DELIMITER &&
 			it->type() == TTPunctuator::OPERATOR) {
-			if (it->text().compare("...")) {
+			if (it->text().compare("...") == 0) {
+				d.vargs = true;
+			} else {
 				std::string errmsg = fmt::format(
-					"Unexpected identifier {}",
+					"Unexpected identifier \"{}\"",
 					it->text());
+				throw std::runtime_error(errmsg);
 			}
-			d.vargs = true;
 		} else {
 			std::string errmsg = fmt::format(
-				"Unexpected identifier {}",
+				"Unexpected identifier \"{}\"",
 				it->text());
 			throw std::runtime_error(errmsg);
 		}
@@ -234,38 +263,41 @@ static Preprocessor::Include
 
 	if (it == tokens.end()) {
 		std::string errmsg = fmt::format(
-			"Invalid use of {}, expected a string literal",
+			"Invalid use of \"{}\", expected a file name",
 			tokens.front().text());
 		throw std::runtime_error(errmsg);
 	}
 	if (it->type() != TTPunctuator::OPERATOR) {
 		std::string errmsg = fmt::format(
-			"Invalid use of {}, expected a string literal",
+			"Invalid use of \"{}\", expected '<'",
 			tokens.front().text());
 		throw std::runtime_error(errmsg);
 	}
 	if (it->text().compare("<")) {
 		std::string errmsg = fmt::format(
-			"Unexpected identitfier: {}, expected '<' before end of line",
+			"Unexpected token: \"{}\", expected '<' before end of line",
 			tokens.front().text());
 		throw std::runtime_error(errmsg);
 	}
-	Token t(TTLiteral::STRING, "");
-	auto closeIt = it;
-	for (; closeIt != tokens.end(); ++closeIt) {
-		if (closeIt->text().compare(">"))
+	std::string filename;
+	while (it != tokens.end()) {
+		if (it->text().compare(">") == 0)
 			break;
-		t.text().append(closeIt->text());
+		filename.append(it->text());
+		++it;
 	}
-	if (closeIt == tokens.end()) {
-		std::string errmsg = fmt::format(
-			"Unterminated '<', expexted '>'",
-			tokens.front().text());
-		throw std::runtime_error(errmsg);
+	if (it == tokens.end()) {
+		throw std::runtime_error("Unterminated '<', expexted '>'");
 	}
-	t.value() = std::make_any<std::string>(t.text());
-	d.file = t.text();
+	++it; // This should be at the end of line now in a well formed program
+	d.file = filename;
 	d.type = Preprocessor::DirectiveType::INCLUDE;
+
+	// This will never actually loop? Is that okay? Should this be an if?
+	for (; it != tokens.end(); ++it) {
+		throw std::runtime_error(fmt::format("Unexpected unquialified id: {}",
+						   it->text()));
+	}
 
 	return d;
 }
@@ -439,14 +471,18 @@ Preprocessor::DirectiveVariant
 
 	try {
 		if (tokens.front().type() != TTIdentifier::KEYWORD) {
-			throw std::logic_error("Not a keyword");
-			return d;
+			throw std::logic_error(fmt::format("\"{}\" Not a keyword",
+				tokens.front().text()));
 		}
 		d = CreateDirective(l.GetKeywords(), l.GetTokens());
 	} catch (const std::logic_error& e) {
-		m_Diagnostics.push_back(fmt::format("Invalid preprocessor directive {} ({})",
-									tokens.front().text(), e.what()));
-		return d;
+		m_Diagnostics.push_back(fmt::format(
+			"Invalid preprocessor directive \"{}\" ({})",
+			tokens.front().text(), e.what()));
+	} catch (const std::runtime_error& e) {
+		m_Diagnostics.push_back(fmt::format(
+			"Invalid preprocessor directive \"{}\" ({})",
+			tokens.front().text(), e.what()));
 	}
 
 	return d;

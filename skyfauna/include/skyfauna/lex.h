@@ -528,6 +528,33 @@ private:
 
 	friend struct fmt::formatter<State>;
 };
+
+constexpr char GetMatchingPairedDelimiter(char d) noexcept {
+	switch (d) {
+		case '[':
+			return ']';
+		case '{':
+			return '}';
+		case '(':
+			return ')';
+		case '<':
+			return '>';
+		case ']':
+			return '[';
+		case '}':
+			return '{';
+		case ')':
+			return '(';
+		case '>':
+			return '<';
+		case '"':
+			return d;
+		case '\'':
+			return d;
+		default:
+			return '\0';
+	}
+}
 }
 
 #endif

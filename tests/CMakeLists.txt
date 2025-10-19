@@ -60,9 +60,27 @@ function(skyfauna_add_unit_test)
 	set_property(TARGET ${target} PROPERTY FOLDER "skyfauna tests")
 endfunction()
 
+add_library(testutil STATIC lex_defs.cpp preproc_defs.cpp)
+set_target_properties(testutil
+	PROPERTIES
+	CXX_STANDARD 20
+	CXX_STANDARD_REQUIRED ON)
+target_link_libraries(testutil PUBLIC skyfauna)
+if (TARGET gtest)
+	target_link_libraries(testutil PUBLIC gtest)
+elseif (SKYFAUNA_FIND_GOOGLETEST)
+	target_link_libraries(testutil PUBLIC GTest::gtest)
+endif()
+
 skyfauna_add_unit_test(
 	TARGET lex
 	SRCS lex.cpp
-	LIBS skyfauna
+	LIBS skyfauna testutil
+)
+
+skyfauna_add_unit_test(
+	TARGET preprocess
+	SRCS preprocessor.cpp
+	LIBS skyfauna testutil
 )
 
